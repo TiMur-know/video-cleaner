@@ -1,0 +1,32 @@
+# requirements.txt
+
+# Core
+numpy
+
+# Image / video processing
+opencv-python
+pillow
+moviepy
+
+# Terminal / visual UI
+rich
+gradio
+
+# Optional ML/runtime packages
+torch
+timm
+diffusers
+transformers
+accelerate
+
+# Detectors
+ultralytics
+easyocr
+paddleocr
+paddlepaddle
+
+# Optional LaMa wrapper
+simple-lama-inpainting
+
+# Optional utilities
+tqdm

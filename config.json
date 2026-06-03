@@ -1,0 +1,41 @@
+{
+  "runtime": {
+    "project_name": "watermwark",
+    "mode": "auto",
+    "log_level": "INFO",
+    "log_file": "data/logs/watermwark.log",
+    "create_dirs": true,
+    "seed": 42
+  },
+  "paths": {
+    "input_dir": "data/inputs",
+    "output_dir": "data/outputs",
+    "mask_dir": "data/masks",
+    "cache_dir": "data/cache",
+    "temp_dir": "data/temp",
+    "log_dir": "data/logs",
+    "model_dir": "models"
+  },
+  "image": {
+    "input_path": "data/inputs/input.png",
+    "output_path": "data/outputs/output.png",
+    "mask_output_path": "data/masks/mask.png",
+    "save_mask": true,
+    "save_output": true,
+    "color_order": "bgr"
+  },
+
+  "video": {
+    "input_path": "data/inputs/input.mp4",
+    "output_path": "data/outputs/output.mp4",
+    "frame_dir": "data/temp/frames",
+    "processed_frame_dir": "data/temp/processed_frames",
+    "save_processed_frames": true,
+    "processed_frame_extension": "png",
+    "keep_frames_in_memory": true,
+    "rebuild": {
+      "copy_audio": true,
+      "audio_backend": "moviepy"
+    }
+  }
+}

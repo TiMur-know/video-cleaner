@@ -1,0 +1,43 @@
+# .dockerignore
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.git/
+.gitignore
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+notebooks/
+*.ipynb_checkpoints/
+
+data/temp/
+data/cache/
+data/logs/
+data/outputs/
+data/masks/
+
+# Keep inputs optional. Remove this line if you want to bake inputs into image.
+data/inputs/
+
+# Do not bake heavy local models unless you really want huge Docker images.
+models/
+
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+*.pt
+*.pth
+*.safetensors
+*.ckpt

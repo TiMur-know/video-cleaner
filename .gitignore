@@ -1,0 +1,88 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python build/cache
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+data/logs/
+
+# Runtime/cache/temp data
+data/cache/
+data/temp/
+data/temp/frames/
+data/temp/processed_frames/
+
+# Generated outputs
+data/outputs/
+data/masks/
+
+# Keep directory placeholders if you use them
+!data/outputs/.gitkeep
+!data/masks/.gitkeep
+!data/cache/.gitkeep
+!data/temp/.gitkeep
+!data/logs/.gitkeep
+
+# Optional: ignore local input media
+# Remove these lines if you want to commit sample inputs.
+data/inputs/*
+!data/inputs/.gitkeep
+
+# Model weights/checkpoints
+models/**/*.pt
+models/**/*.pth
+models/**/*.ckpt
+models/**/*.safetensors
+models/**/*.onnx
+models/**/*.bin
+models/
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.m4v
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+docker-compose.override.yml
