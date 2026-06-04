@@ -642,7 +642,7 @@ def run_terminal_app(
 
     inpainter = ui.ask_choice(
         "Choose inpainter",
-        choices=["auto", "opencv", "lama", "sdxl", "flux"],
+        choices=["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"],
         default=program.get_inpainter_name(config, mode),
     )
 

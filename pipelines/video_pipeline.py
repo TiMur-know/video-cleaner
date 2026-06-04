@@ -176,6 +176,7 @@ class VideoPipeline:
         easy_ocr_reader: Any | None = None,
         paddle_ocr_model: Any | None = None,
         lama_model: Any | None = None,
+        stable_diffusion_pipe: Any | None = None,
         sdxl_pipe: Any | None = None,
         flux_pipe: Any | None = None,
         xmem_model: Any | None = None,
@@ -207,6 +208,7 @@ class VideoPipeline:
         self.inpainting_pipeline = InpaintingPipeline(
             self.config.inpainting,
             lama_model=lama_model,
+            stable_diffusion_pipe=stable_diffusion_pipe,
             sdxl_pipe=sdxl_pipe,
             flux_pipe=flux_pipe,
         )

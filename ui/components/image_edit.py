@@ -13,6 +13,10 @@ from ui.components.mask_processing_settings import (
     build_mask_processing_settings_panel,
     build_mask_processing_tuning_dict,
 )
+from ui.components.inpainter_settings import (
+    build_inpainter_settings_panel,
+    build_inpainter_tuning_dict,
+)
 from ui.components.processing_settings import (
     build_postprocessing_settings_panel,
     build_preprocessing_settings_panel,
@@ -24,6 +28,10 @@ from ui.handlers.detector_settings_handlers import (
     update_detector_settings_visibility,
 )
 from ui.handlers.image_handlers import run_image_from_ui
+from ui.handlers.frame_handlers import (
+    reset_cancel_token,
+    stop_cancel_token,
+)
 from ui.control_defaults import (
     DETECTION_DEFAULTS,
     DEVICE_CHOICES,
@@ -38,6 +46,8 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         *IMAGE_DEFAULTS["proposal_detectors"],
         *IMAGE_DEFAULTS["refiner_detectors"],
     ]
+
+    pipeline_cancel_state = gr.State({"stop": False})
 
     with gr.Row():
         image_input = gr.File(
@@ -159,16 +169,24 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
 
     mask_processing_settings = build_mask_processing_settings_panel(gr)
 
+    inpainter_settings = build_inpainter_settings_panel(gr)
+
     postprocessing_settings = build_postprocessing_settings_panel(gr)
     processing_settings = merge_processing_settings(
         preprocessing_settings,
         postprocessing_settings,
     )
 
-    run_button = gr.Button(
-        "Run image pipeline",
-        variant="primary",
-    )
+    with gr.Row():
+        run_button = gr.Button(
+            "Run image pipeline",
+            variant="primary",
+        )
+
+        stop_pipeline_button = gr.Button(
+            "Stop image pipeline",
+            variant="stop",
+        )
 
     with gr.Row():
         original_preview = gr.Image(
@@ -199,7 +217,16 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
 
     metadata_output = gr.JSON(label="Pipeline metadata")
 
+    pipeline_status_output = gr.Textbox(
+        label="Image pipeline status",
+        value="Pipeline not started.",
+    )
+
     run_button.click(
+        fn=reset_cancel_token,
+        inputs=[],
+        outputs=[pipeline_cancel_state],
+    ).then(
         fn=lambda image_file,
         out_path,
         mask_path,
@@ -216,6 +243,7 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         mask_processing_stage_values,
         preprocessing_module_values,
         postprocessing_module_values,
+        cancel_token,
         *detector_setting_values: run_image_from_ui(
             config_path=config_path,
             image_file=image_file,
@@ -246,14 +274,28 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
                     ]
                 ),
             ),
+            inpainter_tuning=build_inpainter_tuning_dict(
+                inpainter_settings.input_names,
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs) :
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs)
+                        + len(inpainter_settings.inputs)
+                    ]
+                ),
+            ),
             preprocessing_modules=preprocessing_module_values,
             postprocessing_modules=postprocessing_module_values,
+            cancel_token=cancel_token,
             processing_tuning=build_processing_tuning_dict(
                 processing_settings.input_names,
                 list(
                     detector_setting_values[
                         len(detector_settings.inputs)
-                        + len(mask_processing_settings.inputs) :
+                        + len(mask_processing_settings.inputs)
+                        + len(inpainter_settings.inputs) :
                     ]
                 ),
             ),
@@ -275,8 +317,10 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             mask_processing_settings.stages,
             processing_settings.preprocessing_modules,
             processing_settings.postprocessing_modules,
+            pipeline_cancel_state,
             *detector_settings.inputs,
             *mask_processing_settings.inputs,
+            *inpainter_settings.inputs,
             *processing_settings.inputs,
         ],
         outputs=[
@@ -286,5 +330,19 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             inpainted_preview,
             final_preview,
             metadata_output,
+            pipeline_status_output,
         ],
+    )
+
+    stop_pipeline_button.click(
+        fn=stop_cancel_token,
+        inputs=[pipeline_cancel_state],
+        outputs=[pipeline_cancel_state],
+    ).then(
+        fn=lambda: (
+            "Stop requested. Image pipeline will stop when the current stage "
+            "checks cancel_token."
+        ),
+        inputs=[],
+        outputs=[pipeline_status_output],
     )

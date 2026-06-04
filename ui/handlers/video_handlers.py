@@ -17,6 +17,7 @@ from controls.control import (
     set_inpainter,
     set_tracker,
 )
+from controls.inpainting_control import apply_inpainter_tuning_dict
 from controls.mask_processing_control import apply_mask_processing_controls
 from controls.postprocessing_control import apply_postprocessing_controls
 from controls.preprocessing_control import apply_preprocessing_controls
@@ -50,6 +51,7 @@ def run_video_from_ui(
     mask_processing_enabled: bool | None = None,
     mask_processing_stages: list[str] | None = None,
     mask_processing_tuning: dict[str, Any] | None = None,
+    inpainter_tuning: dict[str, Any] | None = None,
     preprocessing_modules: list[str] | None = None,
     postprocessing_modules: list[str] | None = None,
     processing_tuning: dict[str, Any] | None = None,
@@ -144,8 +146,12 @@ def run_video_from_ui(
     )
 
     set_inpainter(config, inpainter)  # type: ignore[arg-type]
-    set_tracker(config, tracker)  # type: ignore[arg-type]
     set_device(config, device)  # type: ignore[arg-type]
+    apply_inpainter_tuning_dict(
+        config=config,
+        tuning=inpainter_tuning,
+    )
+    set_tracker(config, tracker)  # type: ignore[arg-type]
     set_audio_backend(config, audio_backend)  # type: ignore[arg-type]
 
     pipeline = VideoPipeline(config.video)
@@ -169,6 +175,7 @@ def run_video_from_ui(
             "mask_processing_enabled": mask_processing_enabled,
             "mask_processing_stages": mask_processing_stages or [],
             "mask_processing_tuning": mask_processing_tuning or {},
+            "inpainter_tuning": inpainter_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},
@@ -202,6 +209,7 @@ def run_video_from_ui(
             "mask_processing_enabled": mask_processing_enabled,
             "mask_processing_stages": mask_processing_stages or [],
             "mask_processing_tuning": mask_processing_tuning or {},
+            "inpainter_tuning": inpainter_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},

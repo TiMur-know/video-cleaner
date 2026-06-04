@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 PRESET_CHOICES = ["default", "fast", "balanced", "quality"]
-INPAINTER_CHOICES = ["auto", "opencv", "lama", "sdxl", "flux"]
+INPAINTER_CHOICES = ["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"]
 DEVICE_CHOICES = ["auto", "cpu", "cuda", "mps"]
 TRACKER_CHOICES = ["none", "optical_flow", "kalman", "xmem", "cotracker"]
 AUDIO_BACKEND_CHOICES = ["none", "moviepy", "ffmpeg"]
@@ -109,6 +109,82 @@ MASK_PROCESSING_STAGE_CHOICES = [
     "cleanup",
 ]
 
+INPAINTER_DEFAULTS = {
+    "pipeline_enabled": True,
+    "fallback_enabled": True,
+    "opencv.enabled": True,
+    "opencv.method": "telea",
+    "opencv.radius": 3.0,
+    "opencv.dilate_mask_iterations": 1,
+    "opencv.mask_kernel_size": 3,
+    "lama.enabled": True,
+    "lama.model_path": "models/lama/big-lama.pt",
+    "lama.device": "auto",
+    "lama.modulo": 8,
+    "lama.dilate_mask_iterations": 1,
+    "lama.mask_kernel_size": 5,
+    "lama.check_model_path": True,
+    "stable_diffusion.enabled": True,
+    "stable_diffusion.model_id": "runwayml/stable-diffusion-inpainting",
+    "stable_diffusion.device": "auto",
+    "stable_diffusion.prompt": (
+        "clean natural image, realistic background, seamless texture, "
+        "no watermark, no text, no logo"
+    ),
+    "stable_diffusion.negative_prompt": (
+        "watermark, text, logo, blurry, distorted, artifacts, low quality"
+    ),
+    "stable_diffusion.num_inference_steps": 30,
+    "stable_diffusion.guidance_scale": 7.5,
+    "stable_diffusion.strength": 0.85,
+    "stable_diffusion.seed": 42,
+    "stable_diffusion.resize_to_multiple_of": 8,
+    "stable_diffusion.dilate_mask_iterations": 1,
+    "stable_diffusion.mask_kernel_size": 5,
+    "stable_diffusion.enable_model_cpu_offload": False,
+    "stable_diffusion.enable_attention_slicing": True,
+    "stable_diffusion.torch_dtype": "float16",
+    "sdxl.enabled": True,
+    "sdxl.model_id": "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+    "sdxl.device": "auto",
+    "sdxl.prompt": (
+        "clean natural image, realistic background, seamless texture, "
+        "no watermark, no text, no logo"
+    ),
+    "sdxl.negative_prompt": (
+        "watermark, text, logo, blurry, distorted, artifacts, low quality"
+    ),
+    "sdxl.num_inference_steps": 30,
+    "sdxl.guidance_scale": 7.5,
+    "sdxl.strength": 0.85,
+    "sdxl.seed": 42,
+    "sdxl.resize_to_multiple_of": 8,
+    "sdxl.dilate_mask_iterations": 1,
+    "sdxl.mask_kernel_size": 5,
+    "sdxl.enable_model_cpu_offload": False,
+    "sdxl.enable_attention_slicing": True,
+    "sdxl.torch_dtype": "float16",
+    "flux.enabled": True,
+    "flux.model_id": "black-forest-labs/FLUX.1-Fill-dev",
+    "flux.device": "auto",
+    "flux.prompt": (
+        "clean natural background, realistic texture, seamless repair, "
+        "no watermark, no text, no logo"
+    ),
+    "flux.negative_prompt": (
+        "watermark, text, logo, artifacts, distortion, blurry, low quality"
+    ),
+    "flux.num_inference_steps": 40,
+    "flux.guidance_scale": 30.0,
+    "flux.seed": 42,
+    "flux.resize_to_multiple_of": 8,
+    "flux.dilate_mask_iterations": 1,
+    "flux.mask_kernel_size": 5,
+    "flux.enable_model_cpu_offload": False,
+    "flux.enable_attention_slicing": True,
+    "flux.torch_dtype": "bfloat16",
+}
+
 DETECTOR_DEFAULTS = {
     "opencv.mode": "combined",
     "opencv.canny_low": 50,
@@ -196,3 +272,7 @@ POSTPROCESSING_CHOICES = [
 
 def detector_default(name: str) -> object:
     return DETECTOR_DEFAULTS[name]
+
+
+def inpainter_default(name: str) -> object:
+    return INPAINTER_DEFAULTS[name]

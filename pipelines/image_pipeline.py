@@ -29,6 +29,7 @@ from pipelines.postprocessing_pipeline import (
     PostprocessingPipeline,
     PostprocessingPipelineConfig,
 )
+from pipelines.utils import is_cancelled
 
 
 _MODULE_CACHE: dict[str, Any] = {}
@@ -92,6 +93,8 @@ class ImagePipelineResult:
     inpainting_metadata: dict[str, Any] = field(default_factory=dict)
     postprocessing_metadata: dict[str, Any] = field(default_factory=dict)
 
+    cancelled: bool = False
+    cancelled_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -125,6 +128,7 @@ class ImagePipeline:
         easy_ocr_reader: Any | None = None,
         paddle_ocr_model: Any | None = None,
         lama_model: Any | None = None,
+        stable_diffusion_pipe: Any | None = None,
         sdxl_pipe: Any | None = None,
         flux_pipe: Any | None = None,
     ) -> None:
@@ -149,6 +153,7 @@ class ImagePipeline:
         self.inpainting_pipeline = InpaintingPipeline(
             self.config.inpainting,
             lama_model=lama_model,
+            stable_diffusion_pipe=stable_diffusion_pipe,
             sdxl_pipe=sdxl_pipe,
             flux_pipe=flux_pipe,
         )
@@ -179,6 +184,13 @@ class ImagePipeline:
             "color_order": self.config.color_order,
         }
 
+        if is_cancelled(pipeline_context):
+            return self._cancelled_result(
+                original_image=original_image,
+                stage="before_preprocessing",
+                output_path=output_path,
+            )
+
         preprocessing_result = self.preprocessing_pipeline.run(
             original_image,
             context={
@@ -189,6 +201,15 @@ class ImagePipeline:
 
         preprocessed_image = preprocessing_result.main_image
 
+        if is_cancelled(pipeline_context):
+            return self._cancelled_result(
+                original_image=original_image,
+                preprocessed_image=preprocessed_image,
+                stage="after_preprocessing",
+                output_path=output_path,
+                preprocessing_metadata=preprocessing_result.metadata,
+            )
+
         detection_result = self.detection_pipeline.run(
             preprocessed_image,
             context={
@@ -196,6 +217,17 @@ class ImagePipeline:
                 "stage": "detection",
             },
         )
+
+        if is_cancelled(pipeline_context):
+            return self._cancelled_result(
+                original_image=original_image,
+                preprocessed_image=preprocessed_image,
+                mask=detection_result.mask,
+                stage="after_detection",
+                output_path=output_path,
+                preprocessing_metadata=preprocessing_result.metadata,
+                detection_metadata=detection_result.metadata,
+            )
 
         mask_processing_result = self.mask_processing_pipeline.run_image(
             image=preprocessed_image,
@@ -211,6 +243,18 @@ class ImagePipeline:
 
         mask = mask_processing_result.mask
 
+        if is_cancelled(pipeline_context):
+            return self._cancelled_result(
+                original_image=original_image,
+                preprocessed_image=preprocessed_image,
+                mask=mask,
+                stage="after_mask_processing",
+                output_path=output_path,
+                preprocessing_metadata=preprocessing_result.metadata,
+                detection_metadata=detection_result.metadata,
+                mask_processing_metadata=mask_processing_result.metadata,
+            )
+
         inpainting_result = self.inpainting_pipeline.run_image(
             image=original_image,
             mask=mask,
@@ -219,6 +263,20 @@ class ImagePipeline:
                 "stage": "inpainting",
             },
         )
+
+        if is_cancelled(pipeline_context) or getattr(inpainting_result, "cancelled", False):
+            return self._cancelled_result(
+                original_image=original_image,
+                preprocessed_image=preprocessed_image,
+                mask=mask,
+                inpainted_image=inpainting_result.image,
+                stage=getattr(inpainting_result, "cancelled_at", None) or "after_inpainting",
+                output_path=output_path,
+                preprocessing_metadata=preprocessing_result.metadata,
+                detection_metadata=detection_result.metadata,
+                mask_processing_metadata=mask_processing_result.metadata,
+                inpainting_metadata=inpainting_result.metadata,
+            )
 
         if inpainting_result.image is None:
             raise RuntimeError("Inpainting pipeline returned image=None")
@@ -234,6 +292,22 @@ class ImagePipeline:
                 "stage": "postprocessing",
             },
         )
+
+        if is_cancelled(pipeline_context) or getattr(postprocessing_result, "cancelled", False):
+            return self._cancelled_result(
+                original_image=original_image,
+                preprocessed_image=preprocessed_image,
+                mask=mask,
+                inpainted_image=inpainted_image,
+                final_image=postprocessing_result.image,
+                stage=getattr(postprocessing_result, "cancelled_at", None) or "after_postprocessing",
+                output_path=output_path,
+                preprocessing_metadata=preprocessing_result.metadata,
+                detection_metadata=detection_result.metadata,
+                mask_processing_metadata=mask_processing_result.metadata,
+                inpainting_metadata=inpainting_result.metadata,
+                postprocessing_metadata=postprocessing_result.metadata,
+            )
 
         if postprocessing_result.image is None:
             raise RuntimeError("Postprocessing pipeline returned image=None")
@@ -280,6 +354,60 @@ class ImagePipeline:
             mask_processing_metadata=mask_processing_result.metadata,
             inpainting_metadata=inpainting_result.metadata,
             postprocessing_metadata=postprocessing_result.metadata,
+            cancelled=False,
+            metadata=metadata,
+        )
+
+    def _cancelled_result(
+        self,
+        original_image: np.ndarray,
+        stage: str,
+        output_path: str,
+        preprocessed_image: np.ndarray | None = None,
+        mask: np.ndarray | None = None,
+        inpainted_image: np.ndarray | None = None,
+        final_image: np.ndarray | None = None,
+        preprocessing_metadata: dict[str, Any] | None = None,
+        detection_metadata: dict[str, Any] | None = None,
+        mask_processing_metadata: dict[str, Any] | None = None,
+        inpainting_metadata: dict[str, Any] | None = None,
+        postprocessing_metadata: dict[str, Any] | None = None,
+    ) -> ImagePipelineResult:
+        preprocessed_image = preprocessed_image if preprocessed_image is not None else original_image
+
+        if mask is None:
+            mask = np.zeros(original_image.shape[:2], dtype=np.uint8)
+
+        inpainted_image = inpainted_image if inpainted_image is not None else original_image
+        final_image = final_image if final_image is not None else inpainted_image
+
+        metadata = {
+            "pipeline": self.name,
+            "cancelled": True,
+            "cancelled_at": stage,
+            "output_path": output_path,
+            "original_shape": original_image.shape,
+            "preprocessed_shape": preprocessed_image.shape,
+            "final_shape": final_image.shape,
+            "mask_area": int(np.count_nonzero(mask)),
+            "mask_processing": mask_processing_metadata or {},
+        }
+
+        return ImagePipelineResult(
+            original_image=original_image,
+            preprocessed_image=preprocessed_image,
+            mask=mask,
+            inpainted_image=inpainted_image,
+            final_image=final_image,
+            output_path=None,
+            mask_output_path=None,
+            preprocessing_metadata=preprocessing_metadata or {},
+            detection_metadata=detection_metadata or {},
+            mask_processing_metadata=mask_processing_metadata or {},
+            inpainting_metadata=inpainting_metadata or {},
+            postprocessing_metadata=postprocessing_metadata or {},
+            cancelled=True,
+            cancelled_at=stage,
             metadata=metadata,
         )
 

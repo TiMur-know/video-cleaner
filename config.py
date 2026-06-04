@@ -31,7 +31,7 @@ from utils.env_loader import env_bool, env_choice
 
 
 PresetName = Literal["default", "fast", "balanced", "quality"]
-InpainterName = Literal["auto", "opencv", "lama", "sdxl", "flux"]
+InpainterName = Literal["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"]
 TrackerName = Literal["none", "optical_flow", "kalman", "xmem", "cotracker"]
 OCRName = Literal["none", "paddle", "easy", "both"]
 DeviceName = Literal["auto", "cpu", "cuda", "mps"]
@@ -137,10 +137,10 @@ def add_control_args(parser: ArgumentParser) -> None:
 
     parser.add_argument(
         "--inpainter",
-        choices=["auto", "opencv", "lama", "sdxl", "flux"],
+        choices=["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"],
         default=env_choice(
             "WATERMWARK_INPAINTER",
-            ["auto", "opencv", "lama", "sdxl", "flux"],
+            ["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"],
             "auto",
         ),
         help="Choose inpainter backend.",
@@ -709,6 +709,7 @@ def set_inpainter(config: AppConfig, name: InpainterName) -> None:
     for inpainting in [config.image.inpainting, config.video.inpainting]:
         inpainting.enable_opencv = name in ("auto", "opencv")
         inpainting.enable_lama = name in ("auto", "lama")
+        inpainting.enable_stable_diffusion = name in ("auto", "stable_diffusion")
         inpainting.enable_sdxl = name in ("auto", "sdxl")
         inpainting.enable_flux = name in ("auto", "flux")
 
@@ -732,6 +733,7 @@ def set_device(config: AppConfig, device: DeviceName) -> None:
 
     for inpainting in [config.image.inpainting, config.video.inpainting]:
         inpainting.lama.device = device
+        inpainting.stable_diffusion.device = device
         inpainting.sdxl.device = device
         inpainting.flux.device = device
 
@@ -773,10 +775,11 @@ def disable_inpainting(config: AppConfig) -> None:
 
         inpainting.enable_opencv = True
         inpainting.enable_lama = False
+        inpainting.enable_stable_diffusion = False
         inpainting.enable_sdxl = False
         inpainting.enable_flux = False
 
-        for module_name in ["opencv", "lama", "sdxl", "flux"]:
+        for module_name in ["opencv", "lama", "stable_diffusion", "sdxl", "flux"]:
             set_nested_attr(inpainting, module_name, "enabled", False)
 
 

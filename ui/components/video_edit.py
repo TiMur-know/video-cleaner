@@ -13,6 +13,10 @@ from ui.components.mask_processing_settings import (
     build_mask_processing_settings_panel,
     build_mask_processing_tuning_dict,
 )
+from ui.components.inpainter_settings import (
+    build_inpainter_settings_panel,
+    build_inpainter_tuning_dict,
+)
 from ui.components.processing_settings import (
     build_postprocessing_settings_panel,
     build_preprocessing_settings_panel,
@@ -173,6 +177,8 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
     )
 
     mask_processing_settings = build_mask_processing_settings_panel(gr)
+
+    inpainter_settings = build_inpainter_settings_panel(gr)
 
     postprocessing_settings = build_postprocessing_settings_panel(gr)
     processing_settings = merge_processing_settings(
@@ -373,6 +379,18 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
                     ]
                 ),
             ),
+            inpainter_tuning=build_inpainter_tuning_dict(
+                inpainter_settings.input_names,
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs) :
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs)
+                        + len(inpainter_settings.inputs)
+                    ]
+                ),
+            ),
             preprocessing_modules=preprocessing_module_values,
             postprocessing_modules=postprocessing_module_values,
             processing_tuning=build_processing_tuning_dict(
@@ -380,7 +398,8 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
                 list(
                     detector_setting_values[
                         len(detector_settings.inputs)
-                        + len(mask_processing_settings.inputs) :
+                        + len(mask_processing_settings.inputs)
+                        + len(inpainter_settings.inputs) :
                     ]
                 ),
             ),
@@ -407,6 +426,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
             pipeline_cancel_state,
             *detector_settings.inputs,
             *mask_processing_settings.inputs,
+            *inpainter_settings.inputs,
             *processing_settings.inputs,
         ],
         outputs=[

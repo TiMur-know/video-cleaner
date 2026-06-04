@@ -14,6 +14,7 @@ from controls.control import (
     set_device,
     set_inpainter,
 )
+from controls.inpainting_control import apply_inpainter_tuning_dict
 from controls.mask_processing_control import apply_mask_processing_controls
 from controls.postprocessing_control import apply_postprocessing_controls
 from controls.preprocessing_control import apply_preprocessing_controls
@@ -25,6 +26,7 @@ from ui.components.common import (
     to_preview_mask,
     to_preview_rgb,
 )
+from ui.handlers.frame_handlers import is_cancelled
 
 
 def run_image_from_ui(
@@ -45,9 +47,11 @@ def run_image_from_ui(
     mask_processing_enabled: bool | None = None,
     mask_processing_stages: list[str] | None = None,
     mask_processing_tuning: dict[str, Any] | None = None,
+    inpainter_tuning: dict[str, Any] | None = None,
     preprocessing_modules: list[str] | None = None,
     postprocessing_modules: list[str] | None = None,
     processing_tuning: dict[str, Any] | None = None,
+    cancel_token: dict[str, bool] | None = None,
 ) -> tuple[
     np.ndarray | None,
     np.ndarray | None,
@@ -55,6 +59,7 @@ def run_image_from_ui(
     np.ndarray | None,
     np.ndarray | None,
     dict[str, Any],
+    str,
 ]:
     """
     Run image pipeline from Gradio UI.
@@ -75,6 +80,17 @@ def run_image_from_ui(
 
     if image_file is None:
         raise ValueError("Choose an image file first.")
+
+    if is_cancelled(cancel_token):
+        return (
+            None,
+            None,
+            None,
+            None,
+            None,
+            {"cancelled": True},
+            "Pipeline cancelled before start.",
+        )
 
     proposal_detectors = proposal_detectors or []
     refiner_detectors = refiner_detectors or []
@@ -137,6 +153,10 @@ def run_image_from_ui(
 
     set_inpainter(config, inpainter)  # type: ignore[arg-type]
     set_device(config, device)  # type: ignore[arg-type]
+    apply_inpainter_tuning_dict(
+        config=config,
+        tuning=inpainter_tuning,
+    )
 
     pipeline = ImagePipeline(config.image)
 
@@ -159,11 +179,13 @@ def run_image_from_ui(
             "mask_processing_enabled": mask_processing_enabled,
             "mask_processing_stages": mask_processing_stages or [],
             "mask_processing_tuning": mask_processing_tuning or {},
+            "inpainter_tuning": inpainter_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},
             "inpainter": inpainter,
             "device": device,
+            "cancel_token": cancel_token,
         },
     )
 
@@ -185,6 +207,7 @@ def run_image_from_ui(
             "mask_processing_enabled": mask_processing_enabled,
             "mask_processing_stages": mask_processing_stages or [],
             "mask_processing_tuning": mask_processing_tuning or {},
+            "inpainter_tuning": inpainter_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},
@@ -198,6 +221,8 @@ def run_image_from_ui(
         "postprocessing": result.postprocessing_metadata,
     }
 
+    status = "Pipeline stopped." if getattr(result, "cancelled", False) else "Pipeline finished."
+
     return (
         to_preview_rgb(result.original_image),
         to_preview_rgb(result.preprocessed_image),
@@ -205,6 +230,7 @@ def run_image_from_ui(
         to_preview_rgb(result.inpainted_image),
         to_preview_rgb(result.final_image),
         metadata,
+        status,
     )
 
 

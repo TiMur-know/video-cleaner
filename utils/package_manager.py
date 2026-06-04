@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 from typing import Literal
 
 
@@ -20,6 +22,16 @@ class PackageSpec:
     import_name: str
     install_name: str
     pip_installable: bool = True
+    note: str = ""
+
+
+@dataclass(slots=True)
+class ModelSpec:
+    name: str
+    kind: Literal["local", "hf"]
+    identifier: str
+    installable: bool = False
+    expected_size_bytes: int | None = None
     note: str = ""
 
 
@@ -80,13 +92,13 @@ MODEL_PACKAGES = [
         name="torch",
         import_name="torch",
         install_name="torch",
-        note="Required for SDXL, FLUX, SAM2, XMem, CoTracker.",
+        note="Required for Stable Diffusion, SDXL, FLUX, SAM2, XMem, CoTracker.",
     ),
     PackageSpec(
         name="diffusers",
         import_name="diffusers",
         install_name="diffusers",
-        note="Required for SDXL and FLUX inpainters.",
+        note="Required for Stable Diffusion, SDXL, and FLUX inpainters.",
     ),
     PackageSpec(
         name="transformers",
@@ -99,6 +111,12 @@ MODEL_PACKAGES = [
         import_name="accelerate",
         install_name="accelerate",
         note="Recommended for diffusers model loading.",
+    ),
+    PackageSpec(
+        name="huggingface_hub",
+        import_name="huggingface_hub",
+        install_name="huggingface_hub",
+        note="Required for downloading and removing cached Hugging Face models.",
     ),
     PackageSpec(
         name="ultralytics",
@@ -129,6 +147,76 @@ MODEL_PACKAGES = [
         import_name="simple_lama_inpainting",
         install_name="simple-lama-inpainting",
         note="Optional LaMa wrapper.",
+    ),
+]
+
+MODEL_SPECS = [
+    ModelSpec(
+        name="GroundingDINO base",
+        kind="hf",
+        identifier="IDEA-Research/grounding-dino-base",
+        installable=True,
+        expected_size_bytes=700 * 1024 * 1024,
+        note="Used by the GroundingDINO proposal detector.",
+    ),
+    ModelSpec(
+        name="SDXL inpainting",
+        kind="hf",
+        identifier="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+        installable=True,
+        expected_size_bytes=13 * 1024 * 1024 * 1024,
+        note="Used by the SDXL inpainter.",
+    ),
+    ModelSpec(
+        name="Stable Diffusion inpainting",
+        kind="hf",
+        identifier="runwayml/stable-diffusion-inpainting",
+        installable=True,
+        expected_size_bytes=5 * 1024 * 1024 * 1024,
+        note="Used by the classic Stable Diffusion inpainter.",
+    ),
+    ModelSpec(
+        name="Flux Fill",
+        kind="hf",
+        identifier="black-forest-labs/FLUX.1-Fill-dev",
+        installable=True,
+        expected_size_bytes=45 * 1024 * 1024 * 1024,
+        note="Used by the Flux inpainter. Access may require Hugging Face login.",
+    ),
+    ModelSpec(
+        name="YOLO watermark checkpoint",
+        kind="local",
+        identifier="models/yolo/watermarks_s_yolov8_v1.pt",
+        expected_size_bytes=25 * 1024 * 1024,
+        note="Local YOLO detector checkpoint.",
+    ),
+    ModelSpec(
+        name="SAM2 checkpoint",
+        kind="local",
+        identifier="models/sam2/sam2_b.pt",
+        expected_size_bytes=375 * 1024 * 1024,
+        note="Local SAM2 refiner checkpoint.",
+    ),
+    ModelSpec(
+        name="SAM2 config",
+        kind="local",
+        identifier="configs/sam2/sam2_hiera_b+.yaml",
+        expected_size_bytes=10 * 1024,
+        note="Local SAM2 model config file.",
+    ),
+    ModelSpec(
+        name="MobileSAM2 checkpoint",
+        kind="local",
+        identifier="models/mobile_sam/mobile_sam.pt",
+        expected_size_bytes=40 * 1024 * 1024,
+        note="Local MobileSAM2 checkpoint.",
+    ),
+    ModelSpec(
+        name="LaMa checkpoint",
+        kind="local",
+        identifier="models/lama/big-lama.pt",
+        expected_size_bytes=200 * 1024 * 1024,
+        note="Local LaMa TorchScript checkpoint.",
     ),
 ]
 
@@ -167,13 +255,14 @@ def model_specs_for_selection(
 ) -> list[PackageSpec]:
     specs: list[PackageSpec] = []
 
-    if inpainter in {"sdxl", "flux"}:
+    if inpainter in {"stable_diffusion", "sdxl", "flux"}:
         specs.extend(
             [
                 get_spec("torch"),
                 get_spec("diffusers"),
                 get_spec("transformers"),
                 get_spec("accelerate"),
+                get_spec("huggingface_hub"),
             ]
         )
 
@@ -204,6 +293,26 @@ def get_spec(name: str) -> PackageSpec:
     raise KeyError(f"Unknown package spec: {name}")
 
 
+def all_package_specs() -> list[PackageSpec]:
+    return dedupe_specs(BASE_PACKAGES + UI_PACKAGES + AUDIO_PACKAGES + MODEL_PACKAGES)
+
+
+def get_model_spec(name: str) -> ModelSpec:
+    for spec in MODEL_SPECS:
+        if spec.name == name:
+            return spec
+
+    raise KeyError(f"Unknown model spec: {name}")
+
+
+def package_choices() -> list[str]:
+    return [spec.name for spec in all_package_specs()]
+
+
+def model_choices() -> list[str]:
+    return [spec.name for spec in MODEL_SPECS]
+
+
 def dedupe_specs(specs: list[PackageSpec]) -> list[PackageSpec]:
     seen: set[str] = set()
     result: list[PackageSpec] = []
@@ -231,8 +340,7 @@ def is_installed(spec: PackageSpec) -> bool:
         return shutil.which("ffmpeg") is not None
 
     try:
-        importlib.import_module(spec.import_name)
-        return True
+        return importlib.util.find_spec(spec.import_name) is not None
     except Exception:
         return False
 
@@ -253,6 +361,219 @@ def format_missing_packages(missing: list[PackageSpec]) -> str:
             lines.append(f"  note: {spec.note}")
 
     return "\n".join(lines)
+
+
+def package_status() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    for spec in all_package_specs():
+        installed = is_installed(spec)
+        rows.append(
+            {
+                "name": spec.name,
+                "installed": installed,
+                "source": "pip" if spec.pip_installable else "system",
+                "import": spec.import_name,
+                "install": spec.install_name if spec.pip_installable else None,
+                "note": spec.note,
+            }
+        )
+
+    return rows
+
+
+def model_status() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    for spec in MODEL_SPECS:
+        installed = is_model_installed(spec)
+        installed_size_bytes = model_installed_size_bytes(spec) if installed else None
+        expected_size_bytes = spec.expected_size_bytes
+        rows.append(
+            {
+                "name": spec.name,
+                "installed": installed,
+                "kind": spec.kind,
+                "identifier": spec.identifier,
+                "installable": spec.installable,
+                "installed_size": format_size(installed_size_bytes),
+                "installed_size_bytes": installed_size_bytes,
+                "expected_size": format_size(expected_size_bytes),
+                "expected_size_bytes": expected_size_bytes,
+                "shown_size": format_size(installed_size_bytes or expected_size_bytes),
+                "shown_size_type": "installed" if installed_size_bytes is not None else "estimated",
+                "note": spec.note,
+            }
+        )
+
+    return rows
+
+
+def full_environment_status() -> dict[str, Any]:
+    return {
+        "packages": package_status(),
+        "models": model_status(),
+    }
+
+
+def installed_package_names() -> list[str]:
+    return [
+        row["name"]
+        for row in package_status()
+        if row["installed"]
+    ]
+
+
+def installed_model_names() -> list[str]:
+    return [
+        row["name"]
+        for row in model_status()
+        if row["installed"]
+    ]
+
+
+def format_installed_package_names() -> str:
+    return format_name_list(
+        installed_package_names(),
+        empty_text="No tracked runtime packages are installed.",
+    )
+
+
+def format_installed_model_names() -> str:
+    rows = [
+        row
+        for row in model_status()
+        if row["installed"]
+    ]
+
+    if not rows:
+        return "No tracked models or checkpoints are installed."
+
+    return "\n".join(
+        f"- {row['name']} ({row['installed_size'] or 'size unknown'})"
+        for row in rows
+    )
+
+
+def format_model_size_summary() -> str:
+    lines: list[str] = []
+
+    for row in model_status():
+        state = "installed" if row["installed"] else "missing"
+        size = row["installed_size"] if row["installed"] else row["expected_size"]
+        size_type = "actual" if row["installed_size"] else "estimated"
+
+        if not size:
+            size = "size unknown"
+            size_type = "unknown"
+
+        lines.append(f"- {row['name']}: {state}, {size_type} size {size}")
+
+    return "\n".join(lines)
+
+
+def format_name_list(
+    names: list[str],
+    empty_text: str,
+) -> str:
+    if not names:
+        return empty_text
+
+    return "\n".join(f"- {name}" for name in names)
+
+
+def is_model_installed(spec: ModelSpec) -> bool:
+    if spec.kind == "local":
+        return Path(spec.identifier).expanduser().exists()
+
+    return hf_model_cached(spec.identifier)
+
+
+def model_installed_size_bytes(spec: ModelSpec) -> int | None:
+    if spec.kind == "local":
+        return path_size_bytes(Path(spec.identifier).expanduser())
+
+    return hf_model_cached_size_bytes(spec.identifier)
+
+
+def path_size_bytes(path: Path) -> int | None:
+    if not path.exists():
+        return None
+
+    try:
+        if path.is_file():
+            return path.stat().st_size
+
+        return sum(
+            item.stat().st_size
+            for item in path.rglob("*")
+            if item.is_file()
+        )
+    except Exception:
+        return None
+
+
+def hf_model_cached(model_id: str) -> bool:
+    try:
+        from huggingface_hub import scan_cache_dir
+    except Exception:
+        return False
+
+    try:
+        cache_info = scan_cache_dir()
+    except Exception:
+        return False
+
+    return any(
+        repo.repo_id == model_id
+        for repo in cache_info.repos
+    )
+
+
+def hf_model_cached_size_bytes(model_id: str) -> int | None:
+    try:
+        from huggingface_hub import scan_cache_dir
+    except Exception:
+        return None
+
+    try:
+        cache_info = scan_cache_dir()
+    except Exception:
+        return None
+
+    sizes: list[int] = []
+
+    for repo in cache_info.repos:
+        if repo.repo_id != model_id:
+            continue
+
+        size = getattr(repo, "size_on_disk", None)
+
+        if isinstance(size, int):
+            sizes.append(size)
+
+    if not sizes:
+        return None
+
+    return sum(sizes)
+
+
+def format_size(size_bytes: int | None) -> str | None:
+    if size_bytes is None:
+        return None
+
+    value = float(size_bytes)
+
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if value < 1024 or unit == "TB":
+            if unit == "B":
+                return f"{int(value)} {unit}"
+
+            return f"{value:.1f} {unit}"
+
+        value /= 1024
+
+    return f"{size_bytes} B"
 
 
 def install_packages(
@@ -289,6 +610,125 @@ def install_packages(
     print(" ".join(command))
 
     subprocess.check_call(command)
+
+
+def uninstall_packages(
+    packages: list[PackageSpec],
+) -> None:
+    pip_packages = [
+        spec.install_name
+        for spec in packages
+        if spec.pip_installable
+    ]
+
+    if not pip_packages:
+        return
+
+    command = [
+        sys.executable,
+        "-m",
+        "pip",
+        "uninstall",
+        "-y",
+        *pip_packages,
+    ]
+
+    print("\nUninstalling packages:")
+    print(" ".join(command))
+
+    subprocess.check_call(command)
+
+
+def install_models(
+    models: list[ModelSpec],
+) -> str:
+    lines: list[str] = []
+
+    for spec in models:
+        if spec.kind == "local":
+            lines.append(
+                f"{spec.name}: local file is not auto-downloadable. Expected: {spec.identifier}"
+            )
+            continue
+
+        try:
+            from huggingface_hub import snapshot_download
+        except Exception:
+            lines.append(
+                f"{spec.name}: install huggingface_hub first, then retry."
+            )
+            continue
+
+        try:
+            snapshot_download(repo_id=spec.identifier)
+            lines.append(f"{spec.name}: downloaded or already cached.")
+        except Exception as exc:
+            lines.append(f"{spec.name}: download failed: {exc}")
+
+    return "\n".join(lines) if lines else "No models selected."
+
+
+def uninstall_models(
+    models: list[ModelSpec],
+) -> str:
+    lines: list[str] = []
+
+    for spec in models:
+        if spec.kind == "local":
+            lines.append(uninstall_local_model(spec))
+            continue
+
+        lines.append(uninstall_hf_model(spec))
+
+    return "\n".join(lines) if lines else "No models selected."
+
+
+def uninstall_local_model(spec: ModelSpec) -> str:
+    path = Path(spec.identifier).expanduser()
+
+    if not path.exists():
+        return f"{spec.name}: already missing."
+
+    try:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    except Exception as exc:
+        return f"{spec.name}: uninstall failed: {exc}"
+
+    return f"{spec.name}: removed {path}."
+
+
+def uninstall_hf_model(spec: ModelSpec) -> str:
+    try:
+        from huggingface_hub import scan_cache_dir
+    except Exception:
+        return f"{spec.name}: install huggingface_hub first, then retry."
+
+    try:
+        cache_info = scan_cache_dir()
+        repos = [
+            repo
+            for repo in cache_info.repos
+            if repo.repo_id == spec.identifier
+        ]
+
+        if not repos:
+            return f"{spec.name}: already missing from Hugging Face cache."
+
+        revision_hashes = [
+            revision.commit_hash
+            for repo in repos
+            for revision in repo.revisions
+        ]
+
+        delete_strategy = cache_info.delete_revisions(*revision_hashes)
+        delete_strategy.execute()
+    except Exception as exc:
+        return f"{spec.name}: uninstall failed: {exc}"
+
+    return f"{spec.name}: removed from Hugging Face cache."
 
 
 def ask_to_install_missing(
@@ -365,3 +805,75 @@ def install_missing_for_visual_ui() -> str:
         return "Some packages are still missing:\n" + format_missing_packages(still_missing)
 
     return "Installed missing visual UI packages. Restart the app if imports still fail."
+
+
+def install_packages_by_name(names: list[str] | None) -> str:
+    specs = [
+        get_spec(name)
+        for name in names or []
+    ]
+
+    if not specs:
+        return "No packages selected."
+
+    try:
+        install_packages(specs)
+    except Exception as exc:
+        return f"Install failed: {exc}"
+
+    return "Install finished.\n\n" + format_package_status_for_names(names or [])
+
+
+def uninstall_packages_by_name(names: list[str] | None) -> str:
+    specs = [
+        get_spec(name)
+        for name in names or []
+    ]
+
+    if not specs:
+        return "No packages selected."
+
+    try:
+        uninstall_packages(specs)
+    except Exception as exc:
+        return f"Uninstall failed: {exc}"
+
+    return "Uninstall finished.\n\n" + format_package_status_for_names(names or [])
+
+
+def install_models_by_name(names: list[str] | None) -> str:
+    specs = [
+        get_model_spec(name)
+        for name in names or []
+    ]
+
+    return install_models(specs)
+
+
+def uninstall_models_by_name(names: list[str] | None) -> str:
+    specs = [
+        get_model_spec(name)
+        for name in names or []
+    ]
+
+    return uninstall_models(specs)
+
+
+def format_package_status_for_names(names: list[str]) -> str:
+    rows = {
+        row["name"]: row
+        for row in package_status()
+    }
+
+    lines: list[str] = []
+
+    for name in names:
+        row = rows.get(name)
+
+        if row is None:
+            continue
+
+        state = "installed" if row["installed"] else "missing"
+        lines.append(f"- {name}: {state}")
+
+    return "\n".join(lines)

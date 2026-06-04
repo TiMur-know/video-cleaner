@@ -69,10 +69,10 @@ def preparse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--inpainter",
-        choices=["auto", "opencv", "lama", "sdxl", "flux"],
+        choices=["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"],
         default=env_choice(
             "WATERMWARK_INPAINTER",
-            ["auto", "opencv", "lama", "sdxl", "flux"],
+            ["auto", "opencv", "lama", "stable_diffusion", "sdxl", "flux"],
             "auto",
         ),
     )

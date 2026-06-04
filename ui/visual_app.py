@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.ui_help_text import apply_ui_help_text
 from ui.components.config_panel import build_config_tab
 from ui.components.image_edit import build_image_tab
 from ui.components.package_panel import build_packages_tab
@@ -23,6 +24,7 @@ def launch_visual_app(
     """
 
     gr = lazy_import_gradio()
+    apply_ui_help_text(gr)
 
     with gr.Blocks(title="watermwark") as app:
         gr.Markdown("# watermwark")

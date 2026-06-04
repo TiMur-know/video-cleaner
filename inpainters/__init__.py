@@ -14,6 +14,13 @@ from inpainters.sdxl_inpainter import (
     sdxl_inpaint,
 )
 
+from inpainters.stable_diffusion_inpainter import (
+    StableDiffusionInpaintResult,
+    StableDiffusionInpainter,
+    StableDiffusionInpainterConfig,
+    stable_diffusion_inpaint,
+)
+
 from inpainters.flux_inpainter import (
     FluxInpaintResult,
     FluxInpainter,
@@ -37,6 +44,10 @@ __all__ = [
     "SDXLInpainter",
     "SDXLInpainterConfig",
     "sdxl_inpaint",
+    "StableDiffusionInpaintResult",
+    "StableDiffusionInpainter",
+    "StableDiffusionInpainterConfig",
+    "stable_diffusion_inpaint",
     "FluxInpaintResult",
     "FluxInpainter",
     "FluxInpainterConfig",

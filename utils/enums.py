@@ -22,6 +22,7 @@ class Inpainter(AppEnum):
     AUTO = "auto"
     OPENCV = "opencv"
     LAMA = "lama"
+    STABLE_DIFFUSION = "stable_diffusion"
     SDXL = "sdxl"
     FLUX = "flux"
 
@@ -105,6 +106,7 @@ class TrackerName(AppEnum):
 class InpainterName(AppEnum):
     OPENCV = "opencv"
     LAMA = "lama"
+    STABLE_DIFFUSION = "stable_diffusion"
     FLUX = "flux"
     SDXL = "sdxl"
 

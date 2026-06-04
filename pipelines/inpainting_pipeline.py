@@ -19,6 +19,10 @@ from inpainters.sdxl_inpainter import (
     SDXLInpainter,
     SDXLInpainterConfig,
 )
+from inpainters.stable_diffusion_inpainter import (
+    StableDiffusionInpainter,
+    StableDiffusionInpainterConfig,
+)
 from inpainters.flux_inpainter import (
     FluxInpainter,
     FluxInpainterConfig,
@@ -30,6 +34,7 @@ InpainterMode = Literal[
     "auto",
     "opencv",
     "lama",
+    "stable_diffusion",
     "sdxl",
     "flux",
 ]
@@ -43,6 +48,7 @@ class InpaintingPipelineConfig:
 
     enable_opencv: bool = True
     enable_lama: bool = True
+    enable_stable_diffusion: bool = False
     enable_sdxl: bool = False
     enable_flux: bool = False
 
@@ -51,6 +57,9 @@ class InpaintingPipelineConfig:
 
     opencv: OpenCVInpainterConfig = field(default_factory=OpenCVInpainterConfig)
     lama: LaMaInpainterConfig = field(default_factory=LaMaInpainterConfig)
+    stable_diffusion: StableDiffusionInpainterConfig = field(
+        default_factory=StableDiffusionInpainterConfig
+    )
     sdxl: SDXLInpainterConfig = field(default_factory=SDXLInpainterConfig)
     flux: FluxInpainterConfig = field(default_factory=FluxInpainterConfig)
 
@@ -106,6 +115,7 @@ class InpaintingPipeline:
         self,
         config: InpaintingPipelineConfig | None = None,
         lama_model: Any | None = None,
+        stable_diffusion_pipe: Any | None = None,
         sdxl_pipe: Any | None = None,
         flux_pipe: Any | None = None,
     ) -> None:
@@ -121,6 +131,11 @@ class InpaintingPipeline:
         self.sdxl_inpainter = SDXLInpainter(
             self.config.sdxl,
             pipe=sdxl_pipe,
+        )
+
+        self.stable_diffusion_inpainter = StableDiffusionInpainter(
+            self.config.stable_diffusion,
+            pipe=stable_diffusion_pipe,
         )
 
         self.flux_inpainter = FluxInpainter(
@@ -352,6 +367,9 @@ class InpaintingPipeline:
         if self.config.enable_opencv:
             enabled.append("opencv")
 
+        if self.config.enable_stable_diffusion:
+            enabled.append("stable_diffusion")
+
         if self.config.enable_sdxl:
             enabled.append("sdxl")
 
@@ -363,7 +381,7 @@ class InpaintingPipeline:
 
         selected = self.config.inpainter
 
-        if selected not in {"opencv", "lama", "sdxl", "flux"}:
+        if selected not in {"opencv", "lama", "stable_diffusion", "sdxl", "flux"}:
             raise ValueError(f"Unsupported inpainter: {selected}")
 
         if selected not in enabled:
@@ -403,6 +421,13 @@ class InpaintingPipeline:
 
         if backend_name == "sdxl":
             return self.sdxl_inpainter.inpaint(
+                image=image,
+                mask=mask,
+                context=context,
+            )
+
+        if backend_name == "stable_diffusion":
+            return self.stable_diffusion_inpainter.inpaint(
                 image=image,
                 mask=mask,
                 context=context,
