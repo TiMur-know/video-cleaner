@@ -9,6 +9,10 @@ from controls.control_utils import (
     REFINER_DETECTOR_CHOICES,
 )
 from ui.components.detector_settings import build_detector_settings_panel
+from ui.components.mask_processing_settings import (
+    build_mask_processing_settings_panel,
+    build_mask_processing_tuning_dict,
+)
 from ui.components.processing_settings import (
     build_postprocessing_settings_panel,
     build_preprocessing_settings_panel,
@@ -20,21 +24,19 @@ from ui.handlers.detector_settings_handlers import (
     update_detector_settings_visibility,
 )
 from ui.handlers.image_handlers import run_image_from_ui
-
-
-DEFAULT_IMAGE_PROPOSAL_DETECTORS = [
-    "opencv",
-    "fft",
-    "anomaly",
-]
-
-DEFAULT_IMAGE_REFINER_DETECTORS: list[str] = []
+from ui.control_defaults import (
+    DETECTION_DEFAULTS,
+    DEVICE_CHOICES,
+    IMAGE_DEFAULTS,
+    INPAINTER_CHOICES,
+    PRESET_CHOICES,
+)
 
 
 def build_image_tab(gr: Any, config_path: str | None) -> None:
     default_selected_detectors = [
-        *DEFAULT_IMAGE_PROPOSAL_DETECTORS,
-        *DEFAULT_IMAGE_REFINER_DETECTORS,
+        *IMAGE_DEFAULTS["proposal_detectors"],
+        *IMAGE_DEFAULTS["refiner_detectors"],
     ]
 
     with gr.Row():
@@ -45,31 +47,31 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
 
         output_path = gr.Textbox(
             label="Output image path",
-            value="data/outputs/output.png",
+            value=IMAGE_DEFAULTS["output_path"],
         )
 
         mask_output_path = gr.Textbox(
             label="Output mask path",
-            value="data/masks/mask.png",
+            value=IMAGE_DEFAULTS["mask_output_path"],
         )
 
     with gr.Row():
         preset = gr.Dropdown(
             label="Preset",
-            choices=["default", "fast", "balanced", "quality"],
-            value="balanced",
+            choices=PRESET_CHOICES,
+            value=IMAGE_DEFAULTS["preset"],
         )
 
         inpainter = gr.Dropdown(
             label="Inpainter",
-            choices=["auto", "opencv", "lama", "sdxl", "flux"],
-            value="auto",
+            choices=INPAINTER_CHOICES,
+            value=IMAGE_DEFAULTS["inpainter"],
         )
 
         device = gr.Dropdown(
             label="Device",
-            choices=["auto", "cpu", "cuda", "mps"],
-            value="auto",
+            choices=DEVICE_CHOICES,
+            value=IMAGE_DEFAULTS["device"],
         )
 
     preprocessing_settings = build_preprocessing_settings_panel(gr)
@@ -79,13 +81,13 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
     proposal_detectors = gr.CheckboxGroup(
         label="Proposal detectors: find possible watermark regions",
         choices=list(PROPOSAL_DETECTOR_CHOICES),
-        value=DEFAULT_IMAGE_PROPOSAL_DETECTORS,
+        value=IMAGE_DEFAULTS["proposal_detectors"],
     )
 
     refiner_detectors = gr.CheckboxGroup(
         label="Refiner detectors: improve masks from proposal results",
         choices=list(REFINER_DETECTOR_CHOICES),
-        value=DEFAULT_IMAGE_REFINER_DETECTORS,
+        value=IMAGE_DEFAULTS["refiner_detectors"],
     )
 
     gr.Markdown("## General detection tuning")
@@ -96,7 +98,7 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=100,
             step=1,
-            value=50,
+            value=DETECTION_DEFAULTS["sensitivity"],
         )
 
         mask_expand = gr.Slider(
@@ -104,13 +106,13 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=12,
             step=1,
-            value=2,
+            value=DETECTION_DEFAULTS["mask_expand"],
         )
 
     with gr.Row():
         min_area = gr.Number(
             label="Min area",
-            value=25,
+            value=DETECTION_DEFAULTS["min_area"],
             precision=0,
         )
 
@@ -119,7 +121,7 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=100,
             step=1,
-            value=50,
+            value=DETECTION_DEFAULTS["fusion_strictness"],
         )
 
     detector_settings = build_detector_settings_panel(
@@ -154,6 +156,8 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         ],
         outputs=detector_settings.visibility_outputs,
     )
+
+    mask_processing_settings = build_mask_processing_settings_panel(gr)
 
     postprocessing_settings = build_postprocessing_settings_panel(gr)
     processing_settings = merge_processing_settings(
@@ -208,6 +212,8 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         mask_expand_value,
         min_area_value,
         fusion_strictness_value,
+        mask_processing_enabled_value,
+        mask_processing_stage_values,
         preprocessing_module_values,
         postprocessing_module_values,
         *detector_setting_values: run_image_from_ui(
@@ -228,11 +234,28 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
                 detector_settings.input_names,
                 list(detector_setting_values[: len(detector_settings.inputs)]),
             ),
+            mask_processing_enabled=mask_processing_enabled_value,
+            mask_processing_stages=mask_processing_stage_values,
+            mask_processing_tuning=build_mask_processing_tuning_dict(
+                mask_processing_settings.input_names,
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs) :
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs)
+                    ]
+                ),
+            ),
             preprocessing_modules=preprocessing_module_values,
             postprocessing_modules=postprocessing_module_values,
             processing_tuning=build_processing_tuning_dict(
                 processing_settings.input_names,
-                list(detector_setting_values[len(detector_settings.inputs) :]),
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs) :
+                    ]
+                ),
             ),
         ),
         inputs=[
@@ -248,9 +271,12 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             mask_expand,
             min_area,
             fusion_strictness,
+            mask_processing_settings.enabled,
+            mask_processing_settings.stages,
             processing_settings.preprocessing_modules,
             processing_settings.postprocessing_modules,
             *detector_settings.inputs,
+            *mask_processing_settings.inputs,
             *processing_settings.inputs,
         ],
         outputs=[

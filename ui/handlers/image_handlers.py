@@ -14,6 +14,7 @@ from controls.control import (
     set_device,
     set_inpainter,
 )
+from controls.mask_processing_control import apply_mask_processing_controls
 from controls.postprocessing_control import apply_postprocessing_controls
 from controls.preprocessing_control import apply_preprocessing_controls
 from controls.control_utils import combine_detector_stages
@@ -41,6 +42,9 @@ def run_image_from_ui(
     min_area: int | float = 25,
     fusion_strictness: int | float = 50,
     detector_tuning: dict[str, dict[str, Any]] | None = None,
+    mask_processing_enabled: bool | None = None,
+    mask_processing_stages: list[str] | None = None,
+    mask_processing_tuning: dict[str, Any] | None = None,
     preprocessing_modules: list[str] | None = None,
     postprocessing_modules: list[str] | None = None,
     processing_tuning: dict[str, Any] | None = None,
@@ -112,6 +116,13 @@ def run_image_from_ui(
         tuning=detector_tuning,
     )
 
+    apply_mask_processing_controls(
+        config=config,
+        enabled=mask_processing_enabled,
+        stages=mask_processing_stages,
+        tuning=mask_processing_tuning,
+    )
+
     apply_preprocessing_controls(
         config=config,
         enabled_modules=preprocessing_modules,
@@ -145,6 +156,9 @@ def run_image_from_ui(
             "min_area": min_area,
             "fusion_strictness": fusion_strictness,
             "detector_tuning": detector_tuning or {},
+            "mask_processing_enabled": mask_processing_enabled,
+            "mask_processing_stages": mask_processing_stages or [],
+            "mask_processing_tuning": mask_processing_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},
@@ -168,6 +182,9 @@ def run_image_from_ui(
             "min_area": min_area,
             "fusion_strictness": fusion_strictness,
             "detector_tuning": detector_tuning or {},
+            "mask_processing_enabled": mask_processing_enabled,
+            "mask_processing_stages": mask_processing_stages or [],
+            "mask_processing_tuning": mask_processing_tuning or {},
             "preprocessing_modules": preprocessing_modules or [],
             "postprocessing_modules": postprocessing_modules or [],
             "processing_tuning": processing_tuning or {},

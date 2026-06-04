@@ -5,25 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
-@dataclass(slots=True)
-class DetectorSettingsPanel:
-    """
-    Container returned by build_detector_settings_panel().
-
-    visibility_outputs:
-        Containers whose visibility changes when detector selection changes.
-
-    inputs:
-        All detector tuning inputs.
-
-    input_names:
-        Names matching values in inputs.
-    """
-
-    visibility_outputs: list[Any]
-    inputs: list[Any]
-    input_names: list[str]
+from ui.control_defaults import detector_default
 
 
 DETECTOR_SETTING_ORDER = [
@@ -43,6 +25,26 @@ DETECTOR_SETTING_ORDER = [
     # Final / stage fusion
     "fusion",
 ]
+
+
+@dataclass(slots=True)
+class DetectorSettingsPanel:
+    """
+    Container returned by build_detector_settings_panel().
+
+    visibility_outputs:
+        Containers whose visibility changes when detector selection changes.
+
+    inputs:
+        All detector tuning inputs.
+
+    input_names:
+        Names matching values in inputs.
+    """
+
+    visibility_outputs: list[Any]
+    inputs: list[Any]
+    input_names: list[str]
 
 
 def build_detector_settings_panel(
@@ -76,7 +78,7 @@ def build_detector_settings_panel(
             opencv_mode = gr.Dropdown(
                 label="OpenCV mode",
                 choices=["auto", "adaptive", "edges", "bright", "dark", "combined"],
-                value="combined",
+                value=detector_default("opencv.mode"),
             )
 
             with gr.Row():
@@ -85,7 +87,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=255,
                     step=1,
-                    value=50,
+                    value=detector_default("opencv.canny_low"),
                 )
 
                 opencv_canny_high = gr.Slider(
@@ -93,7 +95,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=255,
                     step=1,
-                    value=150,
+                    value=detector_default("opencv.canny_high"),
                 )
 
             with gr.Row():
@@ -102,7 +104,7 @@ def build_detector_settings_panel(
                     minimum=70,
                     maximum=99.9,
                     step=0.1,
-                    value=92,
+                    value=detector_default("opencv.bright_percentile"),
                 )
 
                 opencv_dark_percentile = gr.Slider(
@@ -110,13 +112,13 @@ def build_detector_settings_panel(
                     minimum=0.1,
                     maximum=30,
                     step=0.1,
-                    value=8,
+                    value=detector_default("opencv.dark_percentile"),
                 )
 
             with gr.Row():
                 opencv_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("opencv.min_area"),
                     precision=0,
                 )
 
@@ -125,7 +127,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=12,
                     step=1,
-                    value=2,
+                    value=detector_default("opencv.dilate_iterations"),
                 )
 
     visibility_outputs.append(opencv_box)
@@ -150,15 +152,12 @@ def build_detector_settings_panel(
         with gr.Accordion("GroundingDINO proposal detector settings", open=False):
             grounding_dino_model_id = gr.Textbox(
                 label="Model ID",
-                value="IDEA-Research/grounding-dino-base",
+                value=detector_default("grounding_dino.model_id"),
             )
 
             grounding_dino_prompt = gr.Textbox(
                 label="Prompt",
-                value=(
-                    "watermark . logo . text watermark . transparent watermark . "
-                    "faint watermark . low opacity watermark"
-                ),
+                value=detector_default("grounding_dino.prompt"),
                 lines=3,
                 placeholder=(
                     "Example: watermark . logo . transparent watermark\n"
@@ -172,7 +171,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.25,
+                    value=detector_default("grounding_dino.box_threshold"),
                 )
 
                 grounding_dino_text_threshold = gr.Slider(
@@ -180,31 +179,31 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.20,
+                    value=detector_default("grounding_dino.text_threshold"),
                 )
 
             with gr.Row():
                 grounding_dino_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("grounding_dino.min_area"),
                     precision=0,
                 )
 
                 grounding_dino_max_boxes = gr.Number(
                     label="Max boxes",
-                    value=20,
+                    value=detector_default("grounding_dino.max_boxes"),
                     precision=0,
                 )
 
             with gr.Row():
                 grounding_dino_strict_loading = gr.Checkbox(
                     label="Strict loading",
-                    value=False,
+                    value=detector_default("grounding_dino.strict_loading"),
                 )
 
                 grounding_dino_fallback_to_empty = gr.Checkbox(
                     label="Fallback to empty mask on error",
-                    value=True,
+                    value=detector_default("grounding_dino.fallback_to_empty"),
                 )
 
     visibility_outputs.append(grounding_dino_box)
@@ -234,7 +233,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.25,
+                    value=detector_default("yolo.confidence"),
                 )
 
                 yolo_iou = gr.Slider(
@@ -242,12 +241,12 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.45,
+                    value=detector_default("yolo.iou"),
                 )
 
             yolo_image_size = gr.Number(
                 label="Image size",
-                value=640,
+                value=detector_default("yolo.image_size"),
                 precision=0,
             )
 
@@ -277,12 +276,12 @@ def build_detector_settings_panel(
                     minimum=80,
                     maximum=99.9,
                     step=0.1,
-                    value=95,
+                    value=detector_default("fft.threshold_percentile"),
                 )
 
                 fft_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("fft.min_area"),
                     precision=0,
                 )
 
@@ -291,7 +290,7 @@ def build_detector_settings_panel(
                 minimum=0,
                 maximum=12,
                 step=1,
-                value=2,
+                value=detector_default("fft.dilate_iterations"),
             )
 
     visibility_outputs.append(fft_box)
@@ -317,12 +316,12 @@ def build_detector_settings_panel(
                     minimum=0.1,
                     maximum=8,
                     step=0.1,
-                    value=2.5,
+                    value=detector_default("anomaly.threshold"),
                 )
 
                 anomaly_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("anomaly.min_area"),
                     precision=0,
                 )
 
@@ -331,7 +330,7 @@ def build_detector_settings_panel(
                 minimum=0,
                 maximum=12,
                 step=1,
-                value=2,
+                value=detector_default("anomaly.dilate_iterations"),
             )
 
     visibility_outputs.append(anomaly_box)
@@ -358,12 +357,12 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.4,
+                    value=detector_default("paddle_ocr.confidence_threshold"),
                 )
 
                 paddle_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("paddle_ocr.min_area"),
                     precision=0,
                 )
 
@@ -372,7 +371,7 @@ def build_detector_settings_panel(
                 minimum=0,
                 maximum=12,
                 step=1,
-                value=2,
+                value=detector_default("paddle_ocr.dilate_iterations"),
             )
 
     visibility_outputs.append(paddle_ocr_box)
@@ -398,12 +397,12 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.4,
+                    value=detector_default("easy_ocr.confidence_threshold"),
                 )
 
                 easy_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("easy_ocr.min_area"),
                     precision=0,
                 )
 
@@ -412,7 +411,7 @@ def build_detector_settings_panel(
                 minimum=0,
                 maximum=12,
                 step=1,
-                value=2,
+                value=detector_default("easy_ocr.dilate_iterations"),
             )
 
     visibility_outputs.append(easy_ocr_box)
@@ -434,18 +433,18 @@ def build_detector_settings_panel(
         with gr.Accordion("SAM2 refiner detector settings", open=False):
             sam2_checkpoint_path = gr.Textbox(
                 label="Checkpoint path",
-                value="models/sam2/sam2_b.pt",
+                value=detector_default("sam2.checkpoint_path"),
             )
 
             sam2_model_config_path = gr.Textbox(
                 label="Model config path",
-                value="configs/sam2/sam2_hiera_b+.yaml",
+                value=detector_default("sam2.model_config_path"),
             )
 
             with gr.Row():
                 sam2_min_area = gr.Number(
                     label="Min area",
-                    value=50,
+                    value=detector_default("sam2.min_area"),
                     precision=0,
                 )
 
@@ -454,7 +453,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.5,
+                    value=detector_default("sam2.mask_threshold"),
                 )
 
             with gr.Row():
@@ -463,7 +462,7 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=12,
                     step=1,
-                    value=1,
+                    value=detector_default("sam2.dilate_iterations"),
                 )
 
                 sam2_morph_kernel_size = gr.Slider(
@@ -471,36 +470,33 @@ def build_detector_settings_panel(
                     minimum=3,
                     maximum=21,
                     step=2,
-                    value=5,
+                    value=detector_default("sam2.morph_kernel_size"),
                 )
 
             with gr.Row():
                 sam2_require_prompts = gr.Checkbox(
                     label="Require prompts",
-                    value=True,
+                    value=detector_default("sam2.require_prompts"),
                 )
 
                 sam2_strict_loading = gr.Checkbox(
                     label="Strict loading",
-                    value=False,
+                    value=detector_default("sam2.strict_loading"),
                 )
 
             sam2_use_auto_watermark_prompts = gr.Checkbox(
                 label="Auto-generate watermark prompts",
-                value=True,
+                value=detector_default("sam2.use_auto_watermark_prompts"),
             )
 
             sam2_use_prompt_text = gr.Checkbox(
                 label="Use editable prompt text",
-                value=True,
+                value=detector_default("sam2.use_prompt_text"),
             )
 
             sam2_prompt_text = gr.Textbox(
                 label="SAM2 watermark prompt",
-                value=(
-                    "dark watermark, light watermark, low opacity watermark, "
-                    "transparent watermark, text watermark, logo"
-                ),
+                value=detector_default("sam2.prompt_text"),
                 lines=3,
                 placeholder=(
                     "Example: dark low opacity text watermark logo\n"
@@ -512,23 +508,23 @@ def build_detector_settings_panel(
             with gr.Row():
                 sam2_prompt_dark_watermark = gr.Checkbox(
                     label="Look for dark watermark",
-                    value=True,
+                    value=detector_default("sam2.prompt_dark_watermark"),
                 )
 
                 sam2_prompt_light_watermark = gr.Checkbox(
                     label="Look for light watermark",
-                    value=True,
+                    value=detector_default("sam2.prompt_light_watermark"),
                 )
 
             with gr.Row():
                 sam2_prompt_low_opacity_watermark = gr.Checkbox(
                     label="Look for low-opacity watermark",
-                    value=True,
+                    value=detector_default("sam2.prompt_low_opacity_watermark"),
                 )
 
                 sam2_prompt_text_watermark = gr.Checkbox(
                     label="Look for text-like watermark",
-                    value=True,
+                    value=detector_default("sam2.prompt_text_watermark"),
                 )
 
             sam2_prompt_sensitivity = gr.Slider(
@@ -536,19 +532,19 @@ def build_detector_settings_panel(
                 minimum=0,
                 maximum=100,
                 step=1,
-                value=50,
+                value=detector_default("sam2.prompt_sensitivity"),
             )
 
             with gr.Row():
                 sam2_prompt_min_area = gr.Number(
                     label="Prompt min area",
-                    value=25,
+                    value=detector_default("sam2.prompt_min_area"),
                     precision=0,
                 )
 
                 sam2_prompt_max_boxes = gr.Number(
                     label="Max prompt boxes",
-                    value=20,
+                    value=detector_default("sam2.prompt_max_boxes"),
                     precision=0,
                 )
 
@@ -557,7 +553,7 @@ def build_detector_settings_panel(
                 minimum=0.01,
                 maximum=1.0,
                 step=0.01,
-                value=0.35,
+                value=detector_default("sam2.prompt_max_area_ratio"),
             )
 
             with gr.Row():
@@ -566,7 +562,7 @@ def build_detector_settings_panel(
                     minimum=1,
                     maximum=35,
                     step=0.1,
-                    value=8,
+                    value=detector_default("sam2.dark_percentile"),
                 )
 
                 sam2_light_percentile = gr.Slider(
@@ -574,7 +570,7 @@ def build_detector_settings_panel(
                     minimum=65,
                     maximum=99,
                     step=0.1,
-                    value=92,
+                    value=detector_default("sam2.light_percentile"),
                 )
 
             with gr.Row():
@@ -583,7 +579,7 @@ def build_detector_settings_panel(
                     minimum=1,
                     maximum=255,
                     step=1,
-                    value=30,
+                    value=detector_default("sam2.low_opacity_edge_low"),
                 )
 
                 sam2_low_opacity_edge_high = gr.Slider(
@@ -591,7 +587,7 @@ def build_detector_settings_panel(
                     minimum=1,
                     maximum=255,
                     step=1,
-                    value=100,
+                    value=detector_default("sam2.low_opacity_edge_high"),
                 )
 
     visibility_outputs.append(sam2_box)
@@ -636,18 +632,18 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.5,
+                    value=detector_default("mobile_sam_2.mask_threshold"),
                 )
 
                 mobile_sam_2_min_area = gr.Number(
                     label="Min area",
-                    value=25,
+                    value=detector_default("mobile_sam_2.min_area"),
                     precision=0,
                 )
 
             mobile_sam_2_require_prompts = gr.Checkbox(
                 label="Require prompts",
-                value=True,
+                value=detector_default("mobile_sam_2.require_prompts"),
             )
 
     visibility_outputs.append(mobile_sam_2_box)
@@ -673,12 +669,12 @@ def build_detector_settings_panel(
                     minimum=0,
                     maximum=1,
                     step=0.01,
-                    value=0.5,
+                    value=detector_default("fusion.threshold"),
                 )
 
                 fusion_min_votes = gr.Number(
                     label="Min votes",
-                    value=2,
+                    value=detector_default("fusion.min_votes"),
                     precision=0,
                 )
 

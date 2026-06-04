@@ -26,9 +26,21 @@ from mask_processing.cleanup import (
 )
 
 from mask_processing.fusion import (
+    fuse_intersection,
+    fuse_union,
+    fuse_vote,
+    fuse_weighted,
     MaskFusion,
     MaskFusionConfig,
 )
+
+
+@dataclass(slots=True)
+class MaskCandidate:
+    name: str
+    mask: np.ndarray
+    source_count: int = 1
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -50,6 +62,11 @@ class MaskRefinementPipelineConfig:
 
     # If no refined mask exists, fallback to rough detector mask.
     fallback_to_detection_mask: bool = True
+
+    # Build multiple masks from available sources and select the strongest one.
+    use_candidate_selection: bool = True
+    candidate_min_area: int = 10
+    candidate_max_area_ratio: float = 0.35
 
     box_filter: WatermarkBoxFilterConfig = field(
         default_factory=WatermarkBoxFilterConfig
@@ -155,6 +172,7 @@ class MaskRefinementPipeline:
             self._log_output(result)
             return result
 
+        candidates: list[MaskCandidate] = []
         masks_for_fusion: list[np.ndarray] = []
 
         support_mask = None
@@ -166,6 +184,12 @@ class MaskRefinementPipeline:
             )
             support_mask = support_fusion.mask
             masks_for_fusion.append(support_mask)
+            self._add_candidate(
+                candidates,
+                name="support_fusion",
+                mask=support_mask,
+                source_count=len(support_masks),
+            )
 
         if (
             self.config.use_box_filter
@@ -180,15 +204,36 @@ class MaskRefinementPipeline:
 
             if np.count_nonzero(box_filter_result.mask) > 0:
                 masks_for_fusion.append(box_filter_result.mask)
+                self._add_candidate(
+                    candidates,
+                    name="box_filter",
+                    mask=box_filter_result.mask,
+                    source_count=len(extracted_boxes),
+                )
 
         if self.config.include_detection_masks:
             masks_for_fusion.extend(detection_masks)
+            self._add_mask_candidates(
+                candidates,
+                prefix="detection",
+                masks=detection_masks,
+            )
 
         if not masks_for_fusion and self.config.fallback_to_detection_mask:
             masks_for_fusion.extend(detection_masks)
+            self._add_mask_candidates(
+                candidates,
+                prefix="fallback_detection",
+                masks=detection_masks,
+            )
 
         if not masks_for_fusion and support_masks:
             masks_for_fusion.extend(support_masks)
+            self._add_mask_candidates(
+                candidates,
+                prefix="fallback_support",
+                masks=support_masks,
+            )
 
         if not masks_for_fusion:
             result = MaskRefinementPipelineResult(
@@ -206,15 +251,54 @@ class MaskRefinementPipeline:
             self._log_output(result)
             return result
 
-        if self.config.use_fusion:
+        if self.config.use_candidate_selection:
+            fusion_candidates = self._build_fusion_candidates(masks_for_fusion)
+            candidates.extend(fusion_candidates)
+
+            selected_candidate = self._select_best_candidate(
+                candidates=candidates,
+                image_shape=image.shape[:2],
+                boxes=extracted_boxes,
+                reference_masks=[
+                    *detection_masks,
+                    *support_masks,
+                ],
+            )
+
+            refined_mask = selected_candidate.mask
+            refinement_metadata = {
+                "candidate_selection_enabled": True,
+                "selected_candidate": selected_candidate.name,
+                "candidate_count": len(candidates),
+                "candidate_score": selected_candidate.metadata.get("score"),
+                "candidate_scores": [
+                    {
+                        "name": candidate.name,
+                        "score": candidate.metadata.get("score"),
+                        "area": candidate.metadata.get("area"),
+                        "area_ratio": candidate.metadata.get("area_ratio"),
+                    }
+                    for candidate in candidates
+                ],
+            }
+
+        elif self.config.use_fusion:
             fusion_result = self.fusion.apply(
                 masks=masks_for_fusion,
                 image=image,
                 context={**context, "stage": "final_fusion"},
             )
             refined_mask = fusion_result.mask
+            refinement_metadata = {
+                "candidate_selection_enabled": False,
+                "selected_candidate": "configured_fusion",
+            }
         else:
             refined_mask = masks_for_fusion[0]
+            refinement_metadata = {
+                "candidate_selection_enabled": False,
+                "selected_candidate": "first_available",
+            }
 
         if self.config.use_cleanup:
             cleanup_result = self.cleaner.apply(
@@ -243,6 +327,7 @@ class MaskRefinementPipeline:
                 "mask_area": int(np.count_nonzero(final_mask)),
                 "include_detection_masks": self.config.include_detection_masks,
                 "fallback_to_detection_mask": self.config.fallback_to_detection_mask,
+                **refinement_metadata,
             },
         )
 
@@ -335,6 +420,211 @@ class MaskRefinementPipeline:
 
         return output
 
+    def _add_candidate(
+        self,
+        candidates: list[MaskCandidate],
+        name: str,
+        mask: np.ndarray | None,
+        source_count: int = 1,
+    ) -> None:
+        if mask is None:
+            return
+
+        mask_uint8 = to_mask_uint8(mask)
+
+        if np.count_nonzero(mask_uint8) == 0:
+            return
+
+        candidates.append(
+            MaskCandidate(
+                name=name,
+                mask=mask_uint8,
+                source_count=source_count,
+            )
+        )
+
+    def _add_mask_candidates(
+        self,
+        candidates: list[MaskCandidate],
+        prefix: str,
+        masks: list[np.ndarray],
+    ) -> None:
+        for index, mask in enumerate(masks):
+            self._add_candidate(
+                candidates,
+                name=f"{prefix}_{index}",
+                mask=mask,
+            )
+
+    def _build_fusion_candidates(
+        self,
+        masks: list[np.ndarray],
+    ) -> list[MaskCandidate]:
+        normalized = [
+            to_mask_uint8(mask)
+            for mask in masks
+            if mask is not None and np.count_nonzero(mask) > 0
+        ]
+
+        if not normalized:
+            return []
+
+        candidates: list[MaskCandidate] = []
+        self._add_candidate(candidates, "fusion_union", fuse_union(normalized), len(normalized))
+
+        if len(normalized) > 1:
+            self._add_candidate(
+                candidates,
+                "fusion_intersection",
+                fuse_intersection(normalized),
+                len(normalized),
+            )
+            self._add_candidate(
+                candidates,
+                "fusion_vote",
+                fuse_vote(normalized, min_votes=min(2, len(normalized))),
+                len(normalized),
+            )
+            self._add_candidate(
+                candidates,
+                "fusion_weighted",
+                fuse_weighted(
+                    normalized,
+                    threshold=self.config.fusion.weighted_threshold,
+                ),
+                len(normalized),
+            )
+
+        return candidates
+
+    def _select_best_candidate(
+        self,
+        candidates: list[MaskCandidate],
+        image_shape: tuple[int, int],
+        boxes: list[BBox],
+        reference_masks: list[np.ndarray],
+    ) -> MaskCandidate:
+        if not candidates:
+            return MaskCandidate(
+                name="empty",
+                mask=np.zeros(image_shape, dtype=np.uint8),
+                metadata={
+                    "score": 0.0,
+                    "area": 0,
+                    "area_ratio": 0.0,
+                },
+            )
+
+        scored = [
+            self._score_candidate(
+                candidate=candidate,
+                image_shape=image_shape,
+                boxes=boxes,
+                reference_masks=reference_masks,
+            )
+            for candidate in candidates
+        ]
+
+        return max(
+            scored,
+            key=lambda candidate: float(candidate.metadata.get("score", 0.0)),
+        )
+
+    def _score_candidate(
+        self,
+        candidate: MaskCandidate,
+        image_shape: tuple[int, int],
+        boxes: list[BBox],
+        reference_masks: list[np.ndarray],
+    ) -> MaskCandidate:
+        mask = to_mask_uint8(candidate.mask)
+        area = int(np.count_nonzero(mask))
+        image_area = max(1, int(image_shape[0] * image_shape[1]))
+        area_ratio = area / image_area
+
+        if area <= 0:
+            score = 0.0
+        else:
+            score = 1.0
+            score += self._reference_overlap_score(mask, reference_masks) * 2.0
+            score += self._box_coverage_score(mask, boxes, image_shape)
+            score += min(candidate.source_count, 3) * 0.15
+
+            if area < self.config.candidate_min_area:
+                score -= 2.0
+
+            if area_ratio > self.config.candidate_max_area_ratio:
+                score -= (area_ratio - self.config.candidate_max_area_ratio) * 10.0
+
+        candidate.mask = mask
+        candidate.metadata.update(
+            {
+                "score": round(float(score), 6),
+                "area": area,
+                "area_ratio": round(float(area_ratio), 6),
+            }
+        )
+
+        return candidate
+
+    def _reference_overlap_score(
+        self,
+        mask: np.ndarray,
+        reference_masks: list[np.ndarray],
+    ) -> float:
+        scores: list[float] = []
+
+        mask_bool = to_mask_uint8(mask) > 0
+
+        for reference_mask in reference_masks:
+            reference_bool = to_mask_uint8(reference_mask) > 0
+
+            if reference_bool.shape != mask_bool.shape:
+                continue
+
+            union = np.logical_or(mask_bool, reference_bool)
+            union_area = int(np.count_nonzero(union))
+
+            if union_area <= 0:
+                continue
+
+            intersection_area = int(np.count_nonzero(mask_bool & reference_bool))
+            scores.append(intersection_area / union_area)
+
+        if not scores:
+            return 0.0
+
+        return float(max(scores))
+
+    def _box_coverage_score(
+        self,
+        mask: np.ndarray,
+        boxes: list[BBox],
+        image_shape: tuple[int, int],
+    ) -> float:
+        if not boxes:
+            return 0.0
+
+        box_mask = np.zeros(image_shape, dtype=np.uint8)
+
+        for x1, y1, x2, y2 in boxes:
+            x1 = max(0, min(image_shape[1], int(x1)))
+            x2 = max(0, min(image_shape[1], int(x2)))
+            y1 = max(0, min(image_shape[0], int(y1)))
+            y2 = max(0, min(image_shape[0], int(y2)))
+
+            if x2 > x1 and y2 > y1:
+                box_mask[y1:y2, x1:x2] = 255
+
+        mask_bool = to_mask_uint8(mask) > 0
+        area = int(np.count_nonzero(mask_bool))
+
+        if area <= 0:
+            return 0.0
+
+        inside_area = int(np.count_nonzero(mask_bool & (box_mask > 0)))
+        return inside_area / area
+
     def _first_available_mask_or_empty(
         self,
         image: np.ndarray,
@@ -362,5 +652,7 @@ class MaskRefinementPipeline:
                 "mask_shape": result.mask.shape,
                 "mask_area": result.metadata.get("mask_area"),
                 "fusion_mask_count": result.metadata.get("fusion_mask_count"),
+                "selected_candidate": result.metadata.get("selected_candidate"),
+                "candidate_count": result.metadata.get("candidate_count"),
             },
         )

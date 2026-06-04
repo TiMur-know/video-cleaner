@@ -5,37 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
-DEFAULT_PREPROCESSING_MODULES = [
-    "denoise",
-    "gamma",
-    "clahe",
-    "edge_enhance",
-]
-
-DEFAULT_POSTPROCESSING_MODULES = [
-    "color_matching",
-    "seam_blending",
-    "artifact_removal",
-    "sharpening",
-]
-
-PREPROCESSING_CHOICES = [
-    "resize",
-    "denoise",
-    "gamma",
-    "clahe",
-    "edge_enhance",
-    "fft_enhance",
-]
-
-POSTPROCESSING_CHOICES = [
-    "color_matching",
-    "seam_blending",
-    "artifact_removal",
-    "sharpening",
-    "temporal_smoothing",
-]
+from ui.control_defaults import (
+    POSTPROCESSING_CHOICES,
+    POSTPROCESSING_DEFAULTS,
+    PREPROCESSING_CHOICES,
+    PREPROCESSING_DEFAULTS,
+)
 
 
 @dataclass(slots=True)
@@ -52,7 +27,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
     preprocessing_modules = gr.CheckboxGroup(
         label="Preprocessing stages",
         choices=PREPROCESSING_CHOICES,
-        value=DEFAULT_PREPROCESSING_MODULES,
+        value=PREPROCESSING_DEFAULTS["modules"],
     )
 
     input_components: list[Any] = []
@@ -62,25 +37,25 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
         with gr.Row():
             resize_width = gr.Number(
                 label="Resize width, 0 = original",
-                value=0,
+                value=PREPROCESSING_DEFAULTS["resize_width"],
                 precision=0,
             )
 
             resize_height = gr.Number(
                 label="Resize height, 0 = original",
-                value=0,
+                value=PREPROCESSING_DEFAULTS["resize_height"],
                 precision=0,
             )
 
         with gr.Row():
             resize_keep_aspect = gr.Checkbox(
                 label="Keep aspect ratio",
-                value=True,
+                value=PREPROCESSING_DEFAULTS["resize_keep_aspect"],
             )
 
             resize_only_downscale = gr.Checkbox(
                 label="Only downscale",
-                value=True,
+                value=PREPROCESSING_DEFAULTS["resize_only_downscale"],
             )
 
         with gr.Row():
@@ -89,7 +64,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=150,
                 step=1,
-                value=50,
+                value=PREPROCESSING_DEFAULTS["denoise_strength"],
             )
 
             denoise_kernel_size = gr.Slider(
@@ -97,7 +72,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=1,
                 maximum=21,
                 step=2,
-                value=5,
+                value=PREPROCESSING_DEFAULTS["denoise_kernel_size"],
             )
 
         with gr.Row():
@@ -106,7 +81,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0.2,
                 maximum=3.0,
                 step=0.05,
-                value=1.0,
+                value=PREPROCESSING_DEFAULTS["gamma"],
             )
 
             gain = gr.Slider(
@@ -114,7 +89,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0.2,
                 maximum=3.0,
                 step=0.05,
-                value=1.0,
+                value=PREPROCESSING_DEFAULTS["gain"],
             )
 
         with gr.Row():
@@ -123,7 +98,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0.1,
                 maximum=8.0,
                 step=0.1,
-                value=2.0,
+                value=PREPROCESSING_DEFAULTS["clahe_clip_limit"],
             )
 
             clahe_tile_size = gr.Slider(
@@ -131,7 +106,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=2,
                 maximum=32,
                 step=1,
-                value=8,
+                value=PREPROCESSING_DEFAULTS["clahe_tile_size"],
             )
 
         with gr.Row():
@@ -140,7 +115,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=4.0,
                 step=0.05,
-                value=1.0,
+                value=PREPROCESSING_DEFAULTS["edge_strength"],
             )
 
             fft_strength = gr.Slider(
@@ -148,7 +123,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=1.0,
                 step=0.01,
-                value=0.7,
+                value=PREPROCESSING_DEFAULTS["fft_strength"],
             )
 
         fft_high_pass_radius = gr.Slider(
@@ -156,7 +131,7 @@ def build_preprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
             minimum=1,
             maximum=120,
             step=1,
-            value=20,
+            value=PREPROCESSING_DEFAULTS["fft_high_pass_radius"],
         )
 
     add_inputs(
@@ -193,7 +168,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
     postprocessing_modules = gr.CheckboxGroup(
         label="Postprocessing stages",
         choices=POSTPROCESSING_CHOICES,
-        value=DEFAULT_POSTPROCESSING_MODULES,
+        value=POSTPROCESSING_DEFAULTS["modules"],
     )
 
     input_components: list[Any] = []
@@ -206,7 +181,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=100,
                 step=1,
-                value=40,
+                value=POSTPROCESSING_DEFAULTS["color_match_max_shift"],
             )
 
             color_match_max_scale = gr.Slider(
@@ -214,7 +189,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=1.0,
                 maximum=4.0,
                 step=0.05,
-                value=2.0,
+                value=POSTPROCESSING_DEFAULTS["color_match_max_scale"],
             )
 
         with gr.Row():
@@ -223,7 +198,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=1.0,
                 step=0.01,
-                value=1.0,
+                value=POSTPROCESSING_DEFAULTS["seam_strength"],
             )
 
             seam_blur_kernel_size = gr.Slider(
@@ -231,7 +206,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=3,
                 maximum=61,
                 step=2,
-                value=21,
+                value=POSTPROCESSING_DEFAULTS["seam_blur_kernel_size"],
             )
 
         seam_dilate_iterations = gr.Slider(
@@ -239,7 +214,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
             minimum=0,
             maximum=12,
             step=1,
-            value=2,
+            value=POSTPROCESSING_DEFAULTS["seam_dilate_iterations"],
         )
 
         with gr.Row():
@@ -248,7 +223,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=1,
                 maximum=15,
                 step=2,
-                value=3,
+                value=POSTPROCESSING_DEFAULTS["artifact_kernel_size"],
             )
 
             artifact_dilate_iterations = gr.Slider(
@@ -256,7 +231,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=8,
                 step=1,
-                value=1,
+                value=POSTPROCESSING_DEFAULTS["artifact_dilate_iterations"],
             )
 
         with gr.Row():
@@ -265,7 +240,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=2.0,
                 step=0.05,
-                value=0.4,
+                value=POSTPROCESSING_DEFAULTS["sharpen_strength"],
             )
 
             sharpen_blur_kernel_size = gr.Slider(
@@ -273,7 +248,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=3,
                 maximum=21,
                 step=2,
-                value=5,
+                value=POSTPROCESSING_DEFAULTS["sharpen_blur_kernel_size"],
             )
 
         with gr.Row():
@@ -282,7 +257,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=0,
                 maximum=1.0,
                 step=0.01,
-                value=0.7,
+                value=POSTPROCESSING_DEFAULTS["temporal_alpha"],
             )
 
             temporal_window_size = gr.Slider(
@@ -290,7 +265,7 @@ def build_postprocessing_settings_panel(gr: Any) -> ProcessingSettingsPanel:
                 minimum=1,
                 maximum=15,
                 step=2,
-                value=3,
+                value=POSTPROCESSING_DEFAULTS["temporal_window_size"],
             )
 
     add_inputs(

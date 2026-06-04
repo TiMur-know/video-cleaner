@@ -9,6 +9,10 @@ from controls.control_utils import (
     REFINER_DETECTOR_CHOICES,
 )
 from ui.components.detector_settings import build_detector_settings_panel
+from ui.components.mask_processing_settings import (
+    build_mask_processing_settings_panel,
+    build_mask_processing_tuning_dict,
+)
 from ui.components.processing_settings import (
     build_postprocessing_settings_panel,
     build_preprocessing_settings_panel,
@@ -26,21 +30,21 @@ from ui.handlers.frame_handlers import (
     stop_cancel_token,
 )
 from ui.handlers.video_handlers import run_video_from_ui
-
-
-DEFAULT_VIDEO_PROPOSAL_DETECTORS = [
-    "opencv",
-    "fft",
-    "anomaly",
-]
-
-DEFAULT_VIDEO_REFINER_DETECTORS: list[str] = []
+from ui.control_defaults import (
+    AUDIO_BACKEND_CHOICES,
+    DETECTION_DEFAULTS,
+    DEVICE_CHOICES,
+    INPAINTER_CHOICES,
+    PRESET_CHOICES,
+    TRACKER_CHOICES,
+    VIDEO_DEFAULTS,
+)
 
 
 def build_video_tab(gr: Any, config_path: str | None) -> None:
     default_selected_detectors = [
-        *DEFAULT_VIDEO_PROPOSAL_DETECTORS,
-        *DEFAULT_VIDEO_REFINER_DETECTORS,
+        *VIDEO_DEFAULTS["proposal_detectors"],
+        *VIDEO_DEFAULTS["refiner_detectors"],
     ]
 
     extraction_cancel_state = gr.State({"stop": False})
@@ -57,32 +61,32 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
         output_path = gr.Textbox(
             label="Output video path",
-            value="data/outputs/output.mp4",
+            value=VIDEO_DEFAULTS["output_path"],
         )
 
     with gr.Row():
         preset = gr.Dropdown(
             label="Preset",
-            choices=["default", "fast", "balanced", "quality"],
-            value="fast",
+            choices=PRESET_CHOICES,
+            value=VIDEO_DEFAULTS["preset"],
         )
 
         inpainter = gr.Dropdown(
             label="Inpainter",
-            choices=["auto", "opencv", "lama", "sdxl", "flux"],
-            value="opencv",
+            choices=INPAINTER_CHOICES,
+            value=VIDEO_DEFAULTS["inpainter"],
         )
 
         tracker = gr.Dropdown(
             label="Tracker",
-            choices=["none", "optical_flow", "kalman", "xmem", "cotracker"],
-            value="optical_flow",
+            choices=TRACKER_CHOICES,
+            value=VIDEO_DEFAULTS["tracker"],
         )
 
         device = gr.Dropdown(
             label="Device",
-            choices=["auto", "cpu", "cuda", "mps"],
-            value="auto",
+            choices=DEVICE_CHOICES,
+            value=VIDEO_DEFAULTS["device"],
         )
 
     preprocessing_settings = build_preprocessing_settings_panel(gr)
@@ -92,13 +96,13 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
     proposal_detectors = gr.CheckboxGroup(
         label="Proposal detectors: find possible watermark regions",
         choices=list(PROPOSAL_DETECTOR_CHOICES),
-        value=DEFAULT_VIDEO_PROPOSAL_DETECTORS,
+        value=VIDEO_DEFAULTS["proposal_detectors"],
     )
 
     refiner_detectors = gr.CheckboxGroup(
         label="Refiner detectors: improve masks from proposal results",
         choices=list(REFINER_DETECTOR_CHOICES),
-        value=DEFAULT_VIDEO_REFINER_DETECTORS,
+        value=VIDEO_DEFAULTS["refiner_detectors"],
     )
 
     gr.Markdown("## General detection tuning")
@@ -109,7 +113,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=100,
             step=1,
-            value=50,
+            value=DETECTION_DEFAULTS["sensitivity"],
         )
 
         mask_expand = gr.Slider(
@@ -117,13 +121,13 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=12,
             step=1,
-            value=2,
+            value=DETECTION_DEFAULTS["mask_expand"],
         )
 
     with gr.Row():
         min_area = gr.Number(
             label="Min area",
-            value=25,
+            value=DETECTION_DEFAULTS["min_area"],
             precision=0,
         )
 
@@ -132,7 +136,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
             minimum=0,
             maximum=100,
             step=1,
-            value=50,
+            value=DETECTION_DEFAULTS["fusion_strictness"],
         )
 
     detector_settings = build_detector_settings_panel(
@@ -168,6 +172,8 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
         outputs=detector_settings.visibility_outputs,
     )
 
+    mask_processing_settings = build_mask_processing_settings_panel(gr)
+
     postprocessing_settings = build_postprocessing_settings_panel(gr)
     processing_settings = merge_processing_settings(
         preprocessing_settings,
@@ -176,8 +182,8 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
     audio_backend = gr.Dropdown(
         label="Audio backend",
-        choices=["none", "moviepy", "ffmpeg"],
-        value="moviepy",
+        choices=AUDIO_BACKEND_CHOICES,
+        value=VIDEO_DEFAULTS["audio_backend"],
     )
 
     gr.Markdown("## Frame explorer")
@@ -185,13 +191,13 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
     with gr.Row():
         frame_step = gr.Number(
             label="Frame step",
-            value=1,
+            value=VIDEO_DEFAULTS["frame_step"],
             precision=0,
         )
 
         max_gallery_frames = gr.Number(
             label="Max frames, 0 = all",
-            value=0,
+            value=VIDEO_DEFAULTS["max_gallery_frames"],
             precision=0,
         )
 
@@ -208,7 +214,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
     frame_count_output = gr.Textbox(
         label="Frame count / status",
-        value="No video loaded.",
+        value=VIDEO_DEFAULTS["frame_count_status"],
     )
 
     video_metadata_output = gr.JSON(
@@ -217,10 +223,10 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
     frame_slider = gr.Slider(
         label="Frame number",
-        minimum=0,
-        maximum=1,
+        minimum=VIDEO_DEFAULTS["frame_slider_minimum"],
+        maximum=VIDEO_DEFAULTS["frame_slider_maximum"],
         step=1,
-        value=0,
+        value=VIDEO_DEFAULTS["frame_slider_value"],
         interactive=True,
     )
 
@@ -231,7 +237,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
     selected_frame_label = gr.Textbox(
         label="Selected frame info",
-        value="No frame selected.",
+        value=VIDEO_DEFAULTS["selected_frame_label"],
     )
 
     extract_frames_button.click(
@@ -310,7 +316,7 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
 
     pipeline_status_output = gr.Textbox(
         label="Pipeline status",
-        value="Pipeline not started.",
+        value=VIDEO_DEFAULTS["pipeline_status"],
     )
 
     run_button.click(
@@ -331,6 +337,8 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
         mask_expand_value,
         min_area_value,
         fusion_strictness_value,
+        mask_processing_enabled_value,
+        mask_processing_stage_values,
         preprocessing_module_values,
         postprocessing_module_values,
         cancel_token,
@@ -353,11 +361,28 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
                 detector_settings.input_names,
                 list(detector_setting_values[: len(detector_settings.inputs)]),
             ),
+            mask_processing_enabled=mask_processing_enabled_value,
+            mask_processing_stages=mask_processing_stage_values,
+            mask_processing_tuning=build_mask_processing_tuning_dict(
+                mask_processing_settings.input_names,
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs) :
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs)
+                    ]
+                ),
+            ),
             preprocessing_modules=preprocessing_module_values,
             postprocessing_modules=postprocessing_module_values,
             processing_tuning=build_processing_tuning_dict(
                 processing_settings.input_names,
-                list(detector_setting_values[len(detector_settings.inputs) :]),
+                list(
+                    detector_setting_values[
+                        len(detector_settings.inputs)
+                        + len(mask_processing_settings.inputs) :
+                    ]
+                ),
             ),
             cancel_token=cancel_token,
         ),
@@ -375,10 +400,13 @@ def build_video_tab(gr: Any, config_path: str | None) -> None:
             mask_expand,
             min_area,
             fusion_strictness,
+            mask_processing_settings.enabled,
+            mask_processing_settings.stages,
             processing_settings.preprocessing_modules,
             processing_settings.postprocessing_modules,
             pipeline_cancel_state,
             *detector_settings.inputs,
+            *mask_processing_settings.inputs,
             *processing_settings.inputs,
         ],
         outputs=[
