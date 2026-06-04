@@ -279,57 +279,6 @@ def clip_like_input(output: np.ndarray, reference: np.ndarray) -> np.ndarray:
         return np.clip(output, info.min, info.max).round().astype(dtype)
 
     raise TypeError(f"Unsupported image dtype: {dtype}")
-def summarize_for_log(value: Any, max_items: int = 8) -> Any:
-    """
-    Compact safe log summary for images, masks, lists, dicts, etc.
-    """
-    if value is None:
-        return None
-
-    if isinstance(value, np.ndarray):
-        summary: dict[str, Any] = {
-            "type": "ndarray",
-            "shape": value.shape,
-            "dtype": str(value.dtype),
-            "size": int(value.size),
-        }
-
-        if value.size > 0 and np.issubdtype(value.dtype, np.number):
-            summary["min"] = float(np.min(value))
-            summary["max"] = float(np.max(value))
-
-        return summary
-
-    if isinstance(value, dict):
-        return {
-            str(key): summarize_for_log(item, max_items=max_items)
-            for key, item in list(value.items())[:max_items]
-        }
-
-    if isinstance(value, (list, tuple)):
-        return {
-            "type": type(value).__name__,
-            "length": len(value),
-            "preview": [
-                summarize_for_log(item, max_items=max_items)
-                for item in list(value)[:max_items]
-            ],
-        }
-
-    return value
-
-
-def log_postprocessing_event(
-    module_name: str,
-    event: str,
-    payload: dict[str, Any] | None = None,
-) -> None:
-    print(
-        f"{module_name} {event}:",
-        summarize_for_log(payload or {}),
-    )
-
-
 def image_to_3_channels(image: np.ndarray) -> np.ndarray:
     """
     Convert HxW, HxWx1, HxWx3, or HxWx4 image to HxWx3.

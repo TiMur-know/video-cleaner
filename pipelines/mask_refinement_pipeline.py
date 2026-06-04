@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from core.logger import log_event
 from detectors.utils import (
     BBox,
     empty_mask,
@@ -349,7 +350,7 @@ class MaskRefinementPipeline:
         if not self.config.log_events:
             return
 
-        print(f"{self.name} {event}:", payload)
+        log_event(self.name, event, payload)
 
     def _log_output(self, result: MaskRefinementPipelineResult) -> None:
         self._log(

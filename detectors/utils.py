@@ -9,6 +9,8 @@ import numpy as np
 from pathlib import Path
 from collections.abc import Mapping, Sequence
 
+from core.logger import log_detector_event
+
 BBox = tuple[int, int, int, int]
 
 _MODULE_CACHE: dict[str, Any] = {}
@@ -603,74 +605,6 @@ def extract_auto_mask(item: Any) -> np.ndarray | None:
         return np.asarray(item)
 
     return None
-def summarize_for_log(value: Any, max_items: int = 8) -> Any:
-    """
-    Make values safe and compact for logs.
-
-    Avoids printing full images, masks, tensors, long lists, etc.
-    """
-    if value is None:
-        return None
-
-    if isinstance(value, np.ndarray):
-        summary: dict[str, Any] = {
-            "type": "ndarray",
-            "shape": value.shape,
-            "dtype": str(value.dtype),
-            "size": int(value.size),
-        }
-
-        if value.size > 0 and np.issubdtype(value.dtype, np.number):
-            summary["min"] = float(np.min(value))
-            summary["max"] = float(np.max(value))
-
-        return summary
-
-    if isinstance(value, Path):
-        return {
-            "type": "path",
-            "path": str(value),
-            "exists": value.exists(),
-            "is_file": value.is_file(),
-            "is_dir": value.is_dir(),
-        }
-
-    if isinstance(value, Mapping):
-        return {
-            str(key): summarize_for_log(item, max_items=max_items)
-            for key, item in list(value.items())[:max_items]
-        }
-
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        value_list = list(value)
-
-        return {
-            "type": type(value).__name__,
-            "length": len(value_list),
-            "preview": [
-                summarize_for_log(item, max_items=max_items)
-                for item in value_list[:max_items]
-            ],
-        }
-
-    return value
-
-
-def log_detector_event(
-    detector_name: str,
-    event: str,
-    payload: dict[str, Any] | None = None,
-) -> None:
-    """
-    Shared detector log helper.
-
-    Example:
-        log_detector_event("grounding_dino", "input", {"image": image})
-    """
-    print(
-        f"{detector_name} {event}:",
-        summarize_for_log(payload or {}),
-    )
 
 
 def check_packages(

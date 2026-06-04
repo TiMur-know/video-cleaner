@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from core.logger import log_detector_event
 from detectors.utils import (
     BBox,
     bbox_area,
@@ -15,7 +16,6 @@ from detectors.utils import (
     check_packages,
     empty_mask,
     lazy_import,
-    log_detector_event,
     pad_bbox,
     to_rgb,
     validate_image,

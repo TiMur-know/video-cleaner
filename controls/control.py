@@ -29,7 +29,7 @@ from controls.detection_control import (
     set_ocr,
 )
 from controls.device_control import set_device
-from controls.enums import (
+from utils.enums import (
     AudioBackend,
     Device,
     Inpainter,

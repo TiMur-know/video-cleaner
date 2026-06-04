@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 import numpy as np
 
+from core.logger import log_event
 from detectors.utils import (
     BBox,
     dilate_mask,
@@ -273,8 +274,9 @@ class SAM2Detector:
         }
 
     def _log_detect_input(self, image: np.ndarray, prompts: dict[str, Any]) -> None:
-        print(
-            "SAM2Detector input:",
+        log_event(
+            self.name,
+            "input",
             {
                 "image_shape": image.shape if image is not None else None,
                 "prompt_keys": list(prompts.keys()),
@@ -283,8 +285,9 @@ class SAM2Detector:
         )
 
     def _log_detect_output(self, result: SAM2DetectorResult) -> None:
-        print(
-            "SAM2Detector output:",
+        log_event(
+            self.name,
+            "output",
             {
                 "enabled": result.metadata.get("enabled"),
                 "skipped": result.metadata.get("skipped"),

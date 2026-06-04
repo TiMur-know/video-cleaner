@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from controls.enums import Tracker
 from core.config import AppConfig
+from utils.enums import Tracker
 
 
 def set_tracker(config: AppConfig, name: Tracker | str) -> None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from controls.enums import AudioBackend
+from utils.enums import AudioBackend
 from core.config import AppConfig
 
 

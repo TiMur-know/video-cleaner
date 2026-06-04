@@ -6,10 +6,10 @@ from typing import Any
 
 from controls.control_utils import combine_detector_stages
 from controls.detection_control import set_detectors
-from controls.enums import Inpainter, Preset, Tracker
 from controls.inpainting_control import set_inpainter
 from controls.tracking_control import set_tracker
 from core.config import AppConfig
+from utils.enums import Inpainter, Preset, Tracker
 
 
 def apply_preset(config: AppConfig, preset: Preset | str) -> None:

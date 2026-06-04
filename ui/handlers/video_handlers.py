@@ -17,6 +17,8 @@ from controls.control import (
     set_inpainter,
     set_tracker,
 )
+from controls.postprocessing_control import apply_postprocessing_controls
+from controls.preprocessing_control import apply_preprocessing_controls
 from controls.control_utils import combine_detector_stages
 from core.config import load_config
 from pipelines.video_pipeline import VideoPipeline
@@ -44,6 +46,9 @@ def run_video_from_ui(
     min_area: int | float = 25,
     fusion_strictness: int | float = 50,
     detector_tuning: dict[str, dict[str, Any]] | None = None,
+    preprocessing_modules: list[str] | None = None,
+    postprocessing_modules: list[str] | None = None,
+    processing_tuning: dict[str, Any] | None = None,
     cancel_token: dict[str, bool] | None = None,
 ) -> tuple[str | None, np.ndarray | None, dict[str, Any], str]:
     """
@@ -115,6 +120,18 @@ def run_video_from_ui(
         tuning=detector_tuning,
     )
 
+    apply_preprocessing_controls(
+        config=config,
+        enabled_modules=preprocessing_modules,
+        tuning=processing_tuning,
+    )
+
+    apply_postprocessing_controls(
+        config=config,
+        enabled_modules=postprocessing_modules,
+        tuning=processing_tuning,
+    )
+
     set_inpainter(config, inpainter)  # type: ignore[arg-type]
     set_tracker(config, tracker)  # type: ignore[arg-type]
     set_device(config, device)  # type: ignore[arg-type]
@@ -138,6 +155,9 @@ def run_video_from_ui(
             "min_area": min_area,
             "fusion_strictness": fusion_strictness,
             "detector_tuning": detector_tuning or {},
+            "preprocessing_modules": preprocessing_modules or [],
+            "postprocessing_modules": postprocessing_modules or [],
+            "processing_tuning": processing_tuning or {},
             "inpainter": inpainter,
             "tracker": tracker,
             "device": device,
@@ -165,6 +185,9 @@ def run_video_from_ui(
             "min_area": min_area,
             "fusion_strictness": fusion_strictness,
             "detector_tuning": detector_tuning or {},
+            "preprocessing_modules": preprocessing_modules or [],
+            "postprocessing_modules": postprocessing_modules or [],
+            "processing_tuning": processing_tuning or {},
             "inpainter": inpainter,
             "tracker": tracker,
             "device": device,

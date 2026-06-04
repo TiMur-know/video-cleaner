@@ -16,6 +16,7 @@ from mobile_sam import (
     sam_model_registry,
 )
 
+from core.logger import log_event
 from detectors.utils import (
     best_mask_index,
     extract_auto_mask,
@@ -296,8 +297,9 @@ class MobileSAM2Detector:
     ) -> SAMResult:
         self._check_image_loaded()
 
-        print(
-            "MobileSAM2Detector segment_by_points input:",
+        log_event(
+            self.name,
+            "segment_by_points_input",
             {
                 "points_shape": getattr(points, "shape", None),
                 "labels_shape": getattr(labels, "shape", None),
@@ -323,8 +325,9 @@ class MobileSAM2Detector:
 
         result = SAMResult(masks=masks, scores=scores, logits=logits)
 
-        print(
-            "MobileSAM2Detector segment_by_points output:",
+        log_event(
+            self.name,
+            "segment_by_points_output",
             {
                 "masks_shape": masks.shape,
                 "scores_shape": None if scores is None else scores.shape,
@@ -340,7 +343,7 @@ class MobileSAM2Detector:
     ) -> SAMResult:
         self._check_image_loaded()
 
-        print("MobileSAM2Detector segment_by_box input:", {"box": box})
+        log_event(self.name, "segment_by_box_input", {"box": box})
 
         input_box = np.asarray(box, dtype=np.int32).reshape(4)
 
@@ -351,8 +354,9 @@ class MobileSAM2Detector:
 
         result = SAMResult(masks=masks, scores=scores, logits=logits)
 
-        print(
-            "MobileSAM2Detector segment_by_box output:",
+        log_event(
+            self.name,
+            "segment_by_box_output",
             {
                 "masks_shape": masks.shape,
                 "scores_shape": None if scores is None else scores.shape,
@@ -370,8 +374,9 @@ class MobileSAM2Detector:
     ) -> SAMResult:
         self._check_image_loaded()
 
-        print(
-            "MobileSAM2Detector segment_by_points_and_box input:",
+        log_event(
+            self.name,
+            "segment_by_points_and_box_input",
             {
                 "points_shape": getattr(points, "shape", None),
                 "labels_shape": getattr(labels, "shape", None),
@@ -400,8 +405,9 @@ class MobileSAM2Detector:
 
         result = SAMResult(masks=masks, scores=scores, logits=logits)
 
-        print(
-            "MobileSAM2Detector segment_by_points_and_box output:",
+        log_event(
+            self.name,
+            "segment_by_points_and_box_output",
             {
                 "masks_shape": masks.shape,
                 "scores_shape": None if scores is None else scores.shape,
@@ -413,15 +419,16 @@ class MobileSAM2Detector:
     def segment_everything(self) -> List[Dict[str, Any]]:
         self._check_image_loaded()
 
-        print("MobileSAM2Detector segment_everything input: none")
+        log_event(self.name, "segment_everything_input", {"mode": "automatic"})
 
         masks = SamAutomaticMaskGenerator(
             self.model,
             **(self.config.automatic_mask_kwargs or {}),
         ).generate(self.image_rgb)
 
-        print(
-            "MobileSAM2Detector segment_everything output:",
+        log_event(
+            self.name,
+            "segment_everything_output",
             {"mask_count": len(masks)},
         )
 
@@ -622,8 +629,9 @@ class MobileSAM2Detector:
         image: np.ndarray,
         prompts: dict[str, Any],
     ) -> None:
-        print(
-            "MobileSAM2Detector input:",
+        log_event(
+            self.name,
+            "input",
             {
                 "image_shape": image.shape if image is not None else None,
                 "prompt_keys": list(prompts.keys()),
@@ -632,8 +640,9 @@ class MobileSAM2Detector:
         )
 
     def _log_detect_output(self, result: MobileSAM2DetectorResult) -> None:
-        print(
-            "MobileSAM2Detector output:",
+        log_event(
+            self.name,
+            "output",
             {
                 "enabled": result.metadata.get("enabled"),
                 "reason": result.metadata.get("reason"),

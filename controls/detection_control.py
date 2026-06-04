@@ -9,7 +9,7 @@ from controls.control_utils import (
     normalize_detectors,
     set_if_exists,
 )
-from controls.enums import OCR
+from utils.enums import OCR
 from core.config import AppConfig
 
 

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from controls.detection_control import set_device_for_detectors
-from controls.enums import Device
 from controls.inpainting_control import set_device_for_inpainting
 from controls.tracking_control import set_device_for_tracking
 from core.config import AppConfig
+from utils.enums import Device
 
 
 def set_device(config: AppConfig, device: Device | str) -> None:

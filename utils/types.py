@@ -1,4 +1,4 @@
-# core/types.py
+# utils/types.py
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 
-from core.enums import InputType
+from utils.enums import InputType
 
 
 BBox = tuple[int, int, int, int]
@@ -81,3 +81,16 @@ class PipelineResult:
 
 def ensure_path(path: str | Path) -> Path:
     return Path(path).expanduser().resolve()
+
+
+__all__ = [
+    "BBox",
+    "Detection",
+    "DetectorResult",
+    "FrameData",
+    "MaskData",
+    "MediaInfo",
+    "PipelineContext",
+    "PipelineResult",
+    "ensure_path",
+]

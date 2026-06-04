@@ -1,85 +1,48 @@
 # core/__init__.py
 
-from core.config import (
-    AppConfig,
-    ModuleConfig,
-    PathConfig,
-    RuntimeConfig,
-    default_config,
-    infer_mode_from_path,
-    load_config,
-    save_config,
-    to_dict,
-)
+from __future__ import annotations
 
-from core.enums import (
-    ColorOrder,
-    DetectorName,
-    DeviceType,
-    InputType,
-    InpainterName,
-    LogLevel,
-    MaskFormat,
-    PipelineType,
-    TrackerName,
-)
+from typing import Any
 
-from core.logger import get_logger
 
-from core.registry import (
-    DETECTORS,
-    INPAINTERS,
-    PIPELINES,
-    POSTPROCESSORS,
-    PREPROCESSORS,
-    TRACKERS,
-    Registry,
-)
+_EXPORT_MODULES = {
+    "AppConfig": "core.config",
+    "ModuleConfig": "core.config",
+    "PathConfig": "core.config",
+    "RuntimeConfig": "core.config",
+    "default_config": "core.config",
+    "infer_mode_from_path": "core.config",
+    "load_config": "core.config",
+    "save_config": "core.config",
+    "to_dict": "core.config",
+    "AppLogger": "core.logger",
+    "get_app_logger": "core.logger",
+    "get_logger": "core.logger",
+    "log_detector_event": "core.logger",
+    "log_event": "core.logger",
+    "log_postprocessing_event": "core.logger",
+    "summarize_for_log": "core.logger",
+    "Registry": "core.registry",
+    "PREPROCESSORS": "core.registry",
+    "DETECTORS": "core.registry",
+    "TRACKERS": "core.registry",
+    "INPAINTERS": "core.registry",
+    "POSTPROCESSORS": "core.registry",
+    "PIPELINES": "core.registry",
+}
 
-from core.types import (
-    BBox,
-    Detection,
-    DetectorResult,
-    FrameData,
-    MaskData,
-    MediaInfo,
-    PipelineContext,
-    PipelineResult,
-)
+__all__ = list(_EXPORT_MODULES)
 
-__all__ = [
-    "AppConfig",
-    "ModuleConfig",
-    "PathConfig",
-    "RuntimeConfig",
-    "default_config",
-    "infer_mode_from_path",
-    "load_config",
-    "save_config",
-    "to_dict",
-    "ColorOrder",
-    "DetectorName",
-    "DeviceType",
-    "InputType",
-    "InpainterName",
-    "LogLevel",
-    "MaskFormat",
-    "PipelineType",
-    "TrackerName",
-    "get_logger",
-    "Registry",
-    "PREPROCESSORS",
-    "DETECTORS",
-    "TRACKERS",
-    "INPAINTERS",
-    "POSTPROCESSORS",
-    "PIPELINES",
-    "BBox",
-    "Detection",
-    "DetectorResult",
-    "FrameData",
-    "MaskData",
-    "MediaInfo",
-    "PipelineContext",
-    "PipelineResult",
-]
+
+def __getattr__(name: str) -> Any:
+    module_name = _EXPORT_MODULES.get(name)
+
+    if module_name is None:
+        raise AttributeError(f"module 'core' has no attribute {name!r}")
+
+    from importlib import import_module
+
+    module = import_module(module_name)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value

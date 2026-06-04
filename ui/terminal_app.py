@@ -18,7 +18,7 @@ from controls.control import (
     set_tracker,
 )
 from core.config import AppConfig, infer_mode_from_path, load_config
-from core.logger import get_logger
+from core.logger import get_app_logger
 from pipelines.image_pipeline import ImagePipeline
 from pipelines.video_pipeline import VideoPipeline
 from utils.package_manager import ensure_packages_or_prompt
@@ -716,7 +716,7 @@ def run_terminal_app(
         ui.warning("Pipeline was not started.")
         return
 
-    logger = get_logger(
+    logger = get_app_logger(
         name=config.runtime.project_name,
         level=config.runtime.log_level,
         log_file=config.runtime.log_file,

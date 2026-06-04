@@ -7,11 +7,11 @@ from typing import Any, Literal
 
 import numpy as np
 
+from core.logger import log_postprocessing_event
 from postprocessing.utils import (
     blend_masked,
     image_to_3_channels,
     lazy_import,
-    log_postprocessing_event,
     prepare_image_pair_for_color_matching,
     restore_alpha_channel,
     to_mask_bool,

@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 import numpy as np
 
+from core.logger import log_event
 from detectors.utils import (
     BBox,
     clean_binary_mask,
@@ -352,7 +353,7 @@ class WatermarkBoxFilter:
         if not self.config.log_events:
             return
 
-        print(f"{self.name} {event}:", payload)
+        log_event(self.name, event, payload)
 
     def _log_output(self, result: WatermarkBoxFilterResult) -> None:
         self._log(

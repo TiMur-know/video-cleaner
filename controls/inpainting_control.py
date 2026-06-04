@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from controls.control_utils import set_if_exists
-from controls.enums import Inpainter
 from core.config import AppConfig
+from utils.enums import Inpainter
 
 
 def set_inpainter(config: AppConfig, name: Inpainter | str) -> None:

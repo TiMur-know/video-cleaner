@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from core.logger import log_event
 from detectors.utils import (
     BBox,
     clean_binary_mask,
@@ -190,7 +191,7 @@ class MaskCleaner:
         if not self.config.log_events:
             return
 
-        print(f"{self.name} {event}:", payload)
+        log_event(self.name, event, payload)
 
     def _log_output(self, result: MaskCleanupResult) -> None:
         self._log(

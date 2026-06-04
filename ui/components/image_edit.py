@@ -9,6 +9,12 @@ from controls.control_utils import (
     REFINER_DETECTOR_CHOICES,
 )
 from ui.components.detector_settings import build_detector_settings_panel
+from ui.components.processing_settings import (
+    build_postprocessing_settings_panel,
+    build_preprocessing_settings_panel,
+    build_processing_tuning_dict,
+    merge_processing_settings,
+)
 from ui.handlers.detector_settings_handlers import (
     build_detector_tuning_dict,
     update_detector_settings_visibility,
@@ -65,6 +71,8 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             choices=["auto", "cpu", "cuda", "mps"],
             value="auto",
         )
+
+    preprocessing_settings = build_preprocessing_settings_panel(gr)
 
     gr.Markdown("## Detection")
 
@@ -147,6 +155,12 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         outputs=detector_settings.visibility_outputs,
     )
 
+    postprocessing_settings = build_postprocessing_settings_panel(gr)
+    processing_settings = merge_processing_settings(
+        preprocessing_settings,
+        postprocessing_settings,
+    )
+
     run_button = gr.Button(
         "Run image pipeline",
         variant="primary",
@@ -194,6 +208,8 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
         mask_expand_value,
         min_area_value,
         fusion_strictness_value,
+        preprocessing_module_values,
+        postprocessing_module_values,
         *detector_setting_values: run_image_from_ui(
             config_path=config_path,
             image_file=image_file,
@@ -210,7 +226,13 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             fusion_strictness=fusion_strictness_value,
             detector_tuning=build_detector_tuning_dict(
                 detector_settings.input_names,
-                list(detector_setting_values),
+                list(detector_setting_values[: len(detector_settings.inputs)]),
+            ),
+            preprocessing_modules=preprocessing_module_values,
+            postprocessing_modules=postprocessing_module_values,
+            processing_tuning=build_processing_tuning_dict(
+                processing_settings.input_names,
+                list(detector_setting_values[len(detector_settings.inputs) :]),
             ),
         ),
         inputs=[
@@ -226,7 +248,10 @@ def build_image_tab(gr: Any, config_path: str | None) -> None:
             mask_expand,
             min_area,
             fusion_strictness,
+            processing_settings.preprocessing_modules,
+            processing_settings.postprocessing_modules,
             *detector_settings.inputs,
+            *processing_settings.inputs,
         ],
         outputs=[
             original_preview,
