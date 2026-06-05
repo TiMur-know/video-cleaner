@@ -10,11 +10,67 @@ through GitHub:
 - Author GitHub: https://github.com/TiMur-know/
 - Original source repository: https://github.com/TiMur-know/video-cleaner/
 
+## Model Files, Checkpoints, and External Model Licenses
+
+This repository may reference, download, or use model files, checkpoints,
+configuration files, tokenizer files, weights, or other machine learning assets
+stored under the `models/` directory or downloaded by the package/model manager.
+
+Unless a model file is explicitly created by the copyright holder of this
+repository, that model file is not licensed under this repository license. Each
+third-party model, checkpoint, and dataset-derived artifact remains governed by
+its own upstream license, usage restrictions, attribution requirements, and
+commercial-use terms.
+
+Users and redistributors are responsible for checking and complying with the
+license terms for every model they install, bundle, redistribute, or use,
+including any restrictions on commercial use, hosted services, generated
+outputs, or derivative models.
+
+If you redistribute this repository with model files, model configuration files,
+or download scripts, you must:
+
+- keep this repository license and copyright notice;
+- keep any license, notice, model card, README, or attribution file provided
+  with each model;
+- provide visible links to the original model sources;
+- clearly state whether model files are included directly or must be downloaded
+  separately;
+- not imply that this repository license grants rights to third-party models.
+
+Known model/source links used or supported by this project include:
+
+- GroundingDINO base:
+  https://huggingface.co/IDEA-Research/grounding-dino-base
+- GroundingDINO source:
+  https://github.com/IDEA-Research/GroundingDINO
+- Stable Diffusion inpainting:
+  https://huggingface.co/runwayml/stable-diffusion-inpainting
+- SDXL inpainting:
+  https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1
+- FLUX.1 Fill dev:
+  https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev
+- FLUX source and model licenses:
+  https://github.com/black-forest-labs/flux
+- SAM2:
+  https://github.com/facebookresearch/sam2
+- MobileSAM:
+  https://github.com/ChaoningZhang/MobileSAM
+- LaMa:
+  https://github.com/advimman/lama
+- Ultralytics YOLO runtime:
+  https://github.com/ultralytics/ultralytics
+
+The list above is provided for attribution and convenience. It does not replace
+the upstream license files or model cards.
+
 ## 1. Non-Commercial Permission
 
 This license governs use of this repository and any substantial portion of its
-source code, documentation, configuration, models, scripts, or other
-copyrightable materials (the "Software").
+source code, documentation, configuration, scripts, repository-authored model
+metadata, or other repository-authored copyrightable materials (the
+"Software"). Third-party model files and checkpoints are governed by their own
+upstream terms as described above.
 
 You may use, copy, study, modify, and run the Software for personal,
 educational, research, evaluation, and other non-commercial purposes.
