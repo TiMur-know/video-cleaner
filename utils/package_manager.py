@@ -30,6 +30,7 @@ class ModelSpec:
     name: str
     kind: Literal["local", "hf"]
     identifier: str
+    local_path: str | None = None
     installable: bool = False
     expected_size_bytes: int | None = None
     note: str = ""
@@ -155,6 +156,7 @@ MODEL_SPECS = [
         name="GroundingDINO base",
         kind="hf",
         identifier="IDEA-Research/grounding-dino-base",
+        local_path="models/grounding-dino-base",
         installable=True,
         expected_size_bytes=700 * 1024 * 1024,
         note="Used by the GroundingDINO proposal detector.",
@@ -163,6 +165,7 @@ MODEL_SPECS = [
         name="SDXL inpainting",
         kind="hf",
         identifier="diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+        local_path="models/stable-diffusion-xl-1.0-inpainting-0.1",
         installable=True,
         expected_size_bytes=13 * 1024 * 1024 * 1024,
         note="Used by the SDXL inpainter.",
@@ -171,6 +174,7 @@ MODEL_SPECS = [
         name="Stable Diffusion inpainting",
         kind="hf",
         identifier="runwayml/stable-diffusion-inpainting",
+        local_path="models/stable-diffusion-inpainting",
         installable=True,
         expected_size_bytes=5 * 1024 * 1024 * 1024,
         note="Used by the classic Stable Diffusion inpainter.",
@@ -179,6 +183,7 @@ MODEL_SPECS = [
         name="Flux Fill",
         kind="hf",
         identifier="black-forest-labs/FLUX.1-Fill-dev",
+        local_path="models/FLUX.1-Fill-dev",
         installable=True,
         expected_size_bytes=45 * 1024 * 1024 * 1024,
         note="Used by the Flux inpainter. Access may require Hugging Face login.",
@@ -200,7 +205,7 @@ MODEL_SPECS = [
     ModelSpec(
         name="SAM2 config",
         kind="local",
-        identifier="configs/sam2/sam2_hiera_b+.yaml",
+        identifier="models/sam2/sam2_hiera_b+.yaml",
         expected_size_bytes=10 * 1024,
         note="Local SAM2 model config file.",
     ),
@@ -395,6 +400,7 @@ def model_status() -> list[dict[str, Any]]:
                 "installed": installed,
                 "kind": spec.kind,
                 "identifier": spec.identifier,
+                "local_path": model_local_path(spec),
                 "installable": spec.installable,
                 "installed_size": format_size(installed_size_bytes),
                 "installed_size_bytes": installed_size_bytes,
@@ -450,7 +456,10 @@ def format_installed_model_names() -> str:
         return "No tracked models or checkpoints are installed."
 
     return "\n".join(
-        f"- {row['name']} ({row['installed_size'] or 'size unknown'})"
+        (
+            f"- {row['name']} ({row['installed_size'] or 'size unknown'})"
+            f"\n  path: {row['local_path']}"
+        )
         for row in rows
     )
 
@@ -467,7 +476,9 @@ def format_model_size_summary() -> str:
             size = "size unknown"
             size_type = "unknown"
 
-        lines.append(f"- {row['name']}: {state}, {size_type} size {size}")
+        path = row.get("local_path")
+        path_text = f", path {path}" if path else ""
+        lines.append(f"- {row['name']}: {state}, {size_type} size {size}{path_text}")
 
     return "\n".join(lines)
 
@@ -486,14 +497,26 @@ def is_model_installed(spec: ModelSpec) -> bool:
     if spec.kind == "local":
         return Path(spec.identifier).expanduser().exists()
 
-    return hf_model_cached(spec.identifier)
+    local_path = model_local_path(spec)
+    return local_path is not None and Path(local_path).expanduser().exists()
 
 
 def model_installed_size_bytes(spec: ModelSpec) -> int | None:
     if spec.kind == "local":
         return path_size_bytes(Path(spec.identifier).expanduser())
 
-    return hf_model_cached_size_bytes(spec.identifier)
+    local_path = model_local_path(spec)
+    if local_path is None:
+        return None
+
+    return path_size_bytes(Path(local_path).expanduser())
+
+
+def model_local_path(spec: ModelSpec) -> str | None:
+    if spec.kind == "local":
+        return spec.identifier
+
+    return spec.local_path
 
 
 def path_size_bytes(path: Path) -> int | None:
@@ -660,8 +683,18 @@ def install_models(
             continue
 
         try:
-            snapshot_download(repo_id=spec.identifier)
-            lines.append(f"{spec.name}: downloaded or already cached.")
+            local_path = model_local_path(spec)
+
+            if local_path is None:
+                lines.append(f"{spec.name}: no local model path configured.")
+                continue
+
+            Path(local_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
+            snapshot_download(
+                repo_id=spec.identifier,
+                local_dir=local_path,
+            )
+            lines.append(f"{spec.name}: downloaded to {local_path}.")
         except Exception as exc:
             lines.append(f"{spec.name}: download failed: {exc}")
 
@@ -701,34 +734,25 @@ def uninstall_local_model(spec: ModelSpec) -> str:
 
 
 def uninstall_hf_model(spec: ModelSpec) -> str:
-    try:
-        from huggingface_hub import scan_cache_dir
-    except Exception:
-        return f"{spec.name}: install huggingface_hub first, then retry."
+    local_path = model_local_path(spec)
+
+    if local_path is None:
+        return f"{spec.name}: no local model path configured."
+
+    path = Path(local_path).expanduser()
+
+    if not path.exists():
+        return f"{spec.name}: already missing from {path}."
 
     try:
-        cache_info = scan_cache_dir()
-        repos = [
-            repo
-            for repo in cache_info.repos
-            if repo.repo_id == spec.identifier
-        ]
-
-        if not repos:
-            return f"{spec.name}: already missing from Hugging Face cache."
-
-        revision_hashes = [
-            revision.commit_hash
-            for repo in repos
-            for revision in repo.revisions
-        ]
-
-        delete_strategy = cache_info.delete_revisions(*revision_hashes)
-        delete_strategy.execute()
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
     except Exception as exc:
         return f"{spec.name}: uninstall failed: {exc}"
 
-    return f"{spec.name}: removed from Hugging Face cache."
+    return f"{spec.name}: removed {path}."
 
 
 def ask_to_install_missing(

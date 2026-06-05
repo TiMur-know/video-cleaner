@@ -52,11 +52,11 @@ class SAM2DetectorConfig:
     # not always a local yaml path.
     #
     # Common SAM2:
-    #   configs/sam2/sam2_hiera_b+.yaml
+    #   models/sam2/sam2_hiera_b+.yaml
     #
     # Common SAM2.1:
     #   configs/sam2.1/sam2.1_hiera_b+.yaml
-    model_config_path: str | None = "configs/sam2/sam2_hiera_b+.yaml"
+    model_config_path: str | None = "models/sam2/sam2_hiera_b+.yaml"
 
     device: str = "auto"
 
@@ -125,7 +125,7 @@ class SAM2Detector:
 
         config:
             usually package config name:
-                configs/sam2/sam2_hiera_b+.yaml
+                models/sam2/sam2_hiera_b+.yaml
 
             or SAM2.1:
                 configs/sam2.1/sam2.1_hiera_b+.yaml
@@ -352,11 +352,11 @@ class SAM2Detector:
         if not self.config.model_config_path:
             raise ValueError(
                 "SAM2 model_config_path is not set. "
-                "Example: configs/sam2/sam2_hiera_b+.yaml"
+                "Example: models/sam2/sam2_hiera_b+.yaml"
             )
 
         # Official SAM2 build_sam2 usually accepts package config names like:
-        # configs/sam2/sam2_hiera_b+.yaml
+        # models/sam2/sam2_hiera_b+.yaml
         #
         # Some custom loaders may accept local YAML paths too.
         # So if a local path exists, we allow it. Otherwise we pass the string.

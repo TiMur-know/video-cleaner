@@ -37,7 +37,7 @@ class SDXLInpaintResult:
 class SDXLInpainterConfig:
     enabled: bool = True
 
-    model_id: str = "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
+    model_id: str = "models/stable-diffusion-xl-1.0-inpainting-0.1"
     device: str = "auto"
 
     input_color_order: ColorOrder = "bgr"

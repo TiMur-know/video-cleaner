@@ -37,7 +37,7 @@ class FluxInpaintResult:
 class FluxInpainterConfig:
     enabled: bool = True
 
-    model_id: str = "black-forest-labs/FLUX.1-Fill-dev"
+    model_id: str = "models/FLUX.1-Fill-dev"
     device: str = "auto"
 
     input_color_order: ColorOrder = "bgr"

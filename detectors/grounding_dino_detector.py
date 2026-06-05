@@ -28,7 +28,7 @@ class GroundingDINODetectorConfig:
 
     # Use tiny for faster CPU/debug runs.
     # Use base for better quality if performance is acceptable.
-    model_id: str = "IDEA-Research/grounding-dino-tiny"
+    model_id: str = "models/grounding-dino-base"
 
     device: str = "auto"
 

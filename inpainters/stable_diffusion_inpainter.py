@@ -37,7 +37,7 @@ class StableDiffusionInpaintResult:
 class StableDiffusionInpainterConfig:
     enabled: bool = True
 
-    model_id: str = "runwayml/stable-diffusion-inpainting"
+    model_id: str = "models/stable-diffusion-inpainting"
     device: str = "auto"
 
     input_color_order: ColorOrder = "bgr"

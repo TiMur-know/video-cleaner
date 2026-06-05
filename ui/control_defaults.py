@@ -125,7 +125,7 @@ INPAINTER_DEFAULTS = {
     "lama.mask_kernel_size": 5,
     "lama.check_model_path": True,
     "stable_diffusion.enabled": True,
-    "stable_diffusion.model_id": "runwayml/stable-diffusion-inpainting",
+    "stable_diffusion.model_id": "models/stable-diffusion-inpainting",
     "stable_diffusion.device": "auto",
     "stable_diffusion.prompt": (
         "clean natural image, realistic background, seamless texture, "
@@ -145,7 +145,7 @@ INPAINTER_DEFAULTS = {
     "stable_diffusion.enable_attention_slicing": True,
     "stable_diffusion.torch_dtype": "float16",
     "sdxl.enabled": True,
-    "sdxl.model_id": "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+    "sdxl.model_id": "models/stable-diffusion-xl-1.0-inpainting-0.1",
     "sdxl.device": "auto",
     "sdxl.prompt": (
         "clean natural image, realistic background, seamless texture, "
@@ -165,7 +165,7 @@ INPAINTER_DEFAULTS = {
     "sdxl.enable_attention_slicing": True,
     "sdxl.torch_dtype": "float16",
     "flux.enabled": True,
-    "flux.model_id": "black-forest-labs/FLUX.1-Fill-dev",
+    "flux.model_id": "models/FLUX.1-Fill-dev",
     "flux.device": "auto",
     "flux.prompt": (
         "clean natural background, realistic texture, seamless repair, "
@@ -193,7 +193,7 @@ DETECTOR_DEFAULTS = {
     "opencv.dark_percentile": 8,
     "opencv.min_area": 25,
     "opencv.dilate_iterations": 2,
-    "grounding_dino.model_id": "IDEA-Research/grounding-dino-base",
+    "grounding_dino.model_id": "models/grounding-dino-base",
     "grounding_dino.prompt": (
         "watermark . logo . text watermark . transparent watermark . "
         "faint watermark . low opacity watermark"
@@ -220,7 +220,7 @@ DETECTOR_DEFAULTS = {
     "easy_ocr.min_area": 25,
     "easy_ocr.dilate_iterations": 2,
     "sam2.checkpoint_path": "models/sam2/sam2_b.pt",
-    "sam2.model_config_path": "configs/sam2/sam2_hiera_b+.yaml",
+    "sam2.model_config_path": "models/sam2/sam2_hiera_b+.yaml",
     "sam2.min_area": 50,
     "sam2.mask_threshold": 0.5,
     "sam2.dilate_iterations": 1,
