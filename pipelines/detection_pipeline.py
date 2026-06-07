@@ -19,6 +19,7 @@ from detectors.opencv_detector import OpenCVDetector, OpenCVDetectorConfig
 from detectors.paddle_ocr_detector import PaddleOCRDetector, PaddleOCRDetectorConfig
 from detectors.sam2_detector import SAM2Detector, SAM2DetectorConfig
 from detectors.yolo_detector import YOLODetector, YOLODetectorConfig
+from detectors.utils import pad_bbox
 from pipelines.utils import (
     normalize_mask,
     union_masks,
@@ -138,6 +139,10 @@ class DetectionPipelineConfig:
 
     # Points sampled from proposal masks for SAM2 / MobileSAM2.
     max_prompt_points_per_mask: int = 20
+
+    # Expand proposal boxes before sending them to SAM-style refiners.
+    # Text and logos often need surrounding antialias/shadow pixels removed too.
+    refiner_prompt_box_padding: int = 4
 
 
 @dataclass(slots=True)
@@ -396,7 +401,10 @@ class DetectionPipeline:
         if proposal_fusion is not None:
             prompt_sources["proposal_fusion"] = proposal_fusion
 
-        prompts = self._build_refiner_prompts(prompt_sources)
+        prompts = self._build_refiner_prompts(
+            detector_results=prompt_sources,
+            image_shape=image.shape[:2],
+        )
 
         refiner_results = self._run_refiner_detectors(
             image=image,
@@ -551,6 +559,7 @@ class DetectionPipeline:
     def _build_refiner_prompts(
         self,
         detector_results: dict[str, Any],
+        image_shape: tuple[int, int],
     ) -> dict[str, Any]:
         if not self.config.use_detector_boxes_as_refiner_prompts:
             return {}
@@ -560,7 +569,12 @@ class DetectionPipeline:
         point_labels: list[int] = []
 
         for result in detector_results.values():
-            boxes.extend(extract_boxes(result))
+            boxes.extend(
+                self._pad_prompt_boxes(
+                    boxes=extract_boxes(result),
+                    image_shape=image_shape,
+                )
+            )
 
             mask = getattr(result, "mask", None)
 
@@ -583,6 +597,32 @@ class DetectionPipeline:
             prompts["point_labels"] = np.asarray(point_labels, dtype=np.int32)
 
         return prompts
+
+    def _pad_prompt_boxes(
+        self,
+        boxes: list[Any],
+        image_shape: tuple[int, int],
+    ) -> list[Any]:
+        padding = max(0, int(self.config.refiner_prompt_box_padding))
+
+        if padding <= 0:
+            return boxes
+
+        padded_boxes: list[Any] = []
+
+        for box in boxes:
+            try:
+                padded_boxes.append(
+                    pad_bbox(
+                        bbox=tuple(map(int, box)),
+                        image_shape=image_shape,
+                        padding=padding,
+                    )
+                )
+            except Exception:
+                padded_boxes.append(box)
+
+        return padded_boxes
 
     def _extract_boxes(
         self,

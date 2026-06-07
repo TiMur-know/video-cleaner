@@ -27,6 +27,7 @@ from controls.control_utils import (
     split_detector_stages,
 )
 from core.config import AppConfig, infer_mode_from_path
+from core.presets import apply_app_parameter_overrides, get_preset_config
 from utils.env_loader import env_bool, env_choice
 
 
@@ -412,40 +413,10 @@ def resolve_run_mode(config: AppConfig, args: Namespace) -> str:
 
 
 def apply_preset(config: AppConfig, preset: PresetName) -> None:
-    presets: dict[str, dict[str, Any]] = {
-        "fast": {
-            "inpainter": "opencv",
-            "tracker": "optical_flow",
-            "proposal_detectors": ["opencv", "fft", "anomaly"],
-            "refiner_detectors": [],
-        },
-        "balanced": {
-            "inpainter": "auto",
-            "tracker": "optical_flow",
-            "proposal_detectors": ["opencv", "fft", "anomaly", "paddle_ocr"],
-            "refiner_detectors": [],
-        },
-        "quality": {
-            "inpainter": "lama",
-            "tracker": "xmem",
-            "proposal_detectors": [
-                "opencv",
-                "grounding_dino",
-                "fft",
-                "anomaly",
-                "paddle_ocr",
-            ],
-            "refiner_detectors": ["sam2"],
-        },
-    }
-
     if preset == "default":
         return
 
-    if preset not in presets:
-        raise ValueError(f"Unsupported preset: {preset}")
-
-    preset_config = presets[preset]
+    preset_config = get_preset_config(preset)
 
     set_inpainter(config, preset_config["inpainter"])
     set_tracker(config, preset_config["tracker"])
@@ -456,6 +427,11 @@ def apply_preset(config: AppConfig, preset: PresetName) -> None:
             proposal_detectors=preset_config["proposal_detectors"],
             refiner_detectors=preset_config["refiner_detectors"],
         ),
+    )
+
+    apply_app_parameter_overrides(
+        config,
+        preset_config.get("parameters", {}),
     )
 
 
